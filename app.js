@@ -1027,7 +1027,7 @@ const goToStep = (n) => {
 const stepValue = () =>
   ({
     1: el.inCreatorName.value.trim() ? "ok" : "",
-    2: el.inRepo.value.trim() ? "ok" : "",
+    2: el.inRepo.value.trim() && (el.inToken.value.trim() || githubToken) ? "ok" : "",
     3: state.review.resolvedKind ? "ok" : "",
     4: el.inTitle.value.trim(),
     5: el.inTzero.value.trim(),
@@ -1136,7 +1136,9 @@ el.btnNext.addEventListener("click", () => {
       step === 1
         ? "Name is required"
         : step === 2
-          ? "Enter a repository to continue"
+          ? el.inRepo.value.trim()
+            ? "A GitHub token is required so your comments can be seen by others"
+            : "Enter a repository to continue"
           : step === 3
             ? "Find a build before continuing"
             : "Required";
