@@ -97,10 +97,12 @@ textarea {
   display: none !important;
 }
 
-/* icon-bearing buttons/spans are plain system symbols/emoji now, not
-   SVGs — sized here (rather than by a shared .icon class, since
-   there's no longer an element to hang one on) at roughly the same
-   16px the old SVGs rendered at */
+/* some icon-bearing buttons/spans are plain system symbols/emoji
+   (sized via font-size, since there's no element to hang a width/
+   height on); others — the comment modal's chrome (close/more/
+   resolve/tag/emoji-insert/send) — use a real geometric SVG glyph
+   instead, sized by .icon below, for a crisper match to the app's
+   own stroke-based visual language */
 .info-toggle-btn,
 .icon-btn,
 .icon-close-btn,
@@ -112,6 +114,12 @@ textarea {
 .sync-status-icon {
   font-size: 16px;
   line-height: 1;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
 }
 
 /* MASTHEAD (onboarding only) */
