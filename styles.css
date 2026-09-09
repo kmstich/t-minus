@@ -856,10 +856,17 @@ button.tag-chip {
   color: var(--ink);
 }
 
-.micro-row {
+/* .field span {display:block} outranks a bare .micro-row rule on
+   specificity, so this needs .field in the selector to actually win */
+.field .micro-row {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.field .micro-row .micro {
+  margin-bottom: 0;
 }
 
 .info-toggle-btn {
