@@ -1,5 +1,5 @@
 const KEY_STATE = "tminus.state";
-const KEY_SESSION = "tminus.session";
+const KEY_DEVICE_ID = "tminus.deviceId";
 const KEY_TOKEN = "tminus.token";
 const KEY_TOKEN_TOUCHED = "tminus.token.touched";
 
@@ -80,7 +80,19 @@ const read = (key, fallback) => {
 };
 
 let state = { ...blankState(), ...read(KEY_STATE, {}) };
-let session = read(KEY_SESSION, null);
+
+// Whoever is using this browser already gave their name and email in
+// step 1 of the wizard — that's true whether they're creating a new
+// review or joining an existing one (step 2's "join" happens after
+// step 1, never instead of it), so state.creator is already the
+// right identity for authoring comments/replies. This id is only for
+// keying this browser's own vote distinctly from anyone else's — it
+// has no name attached and nothing ever asks for one.
+let deviceId = localStorage.getItem(KEY_DEVICE_ID);
+if (!deviceId) {
+  deviceId = crypto.randomUUID();
+  localStorage.setItem(KEY_DEVICE_ID, deviceId);
+}
 
 // The token lives in sessionStorage, not localStorage: a hard refresh
 // or a normal reload within the same tab both keep it (so someone
@@ -202,10 +214,12 @@ const el = {
   statVotes: $("#stat-votes"),
 
   composer: $("#composer"),
+  composerAvatar: $("#composer-avatar"),
   commentBody: $("#comment-body"),
   composerTags: $("#composer-tags"),
   composerTagToggle: $("#composer-tag-toggle"),
-  composerCancel: $("#composer-cancel"),
+  composerSend: $("#composer-send"),
+  composerClose: $("#composer-close"),
 
   clickCatcher: $("#click-catcher"),
   clickCatcherWorkspace: $("#click-catcher-workspace"),
@@ -226,9 +240,14 @@ const el = {
   threadModalTagToggle: $("#thread-modal-tag-toggle"),
   threadModalReplies: $("#thread-modal-replies"),
   threadModalReplyForm: $("#thread-modal-reply-form"),
+  threadModalReplyAvatar: $("#thread-modal-reply-avatar"),
   threadModalReplyInput: $("#thread-modal-reply-input"),
-  threadModalReplyToggle: $("#thread-modal-reply-toggle"),
+  threadModalReplySend: $("#thread-modal-reply-send"),
   threadModalResolve: $("#thread-modal-resolve"),
+  threadModalMoreToggle: $("#thread-modal-more-toggle"),
+  threadModalMoreMenu: $("#thread-modal-more-menu"),
+  threadModalCopyLink: $("#thread-modal-copy-link"),
+  threadModalMarkUnread: $("#thread-modal-mark-unread"),
 
   threadTagModal: $("#thread-tag-modal"),
   threadTagModalClose: $("#thread-tag-modal-close"),
@@ -236,10 +255,6 @@ const el = {
   threadModalTagInput: $("#thread-modal-tag-input"),
   threadModalTagAdd: $("#thread-modal-tag-add"),
 
-  gate: $("#gate"),
-  gateForm: $("#gate-form"),
-  gateMeta: $("#gate-meta"),
-  inName: $("#in-name"),
   tpl: $("#tpl-thread"),
 };
 
@@ -299,8 +314,16 @@ const authorColor = (name) => {
 const BRIEF_FIELDS_MIN = 1;
 const BRIEF_FIELDS_MAX = 20;
 
-const TRASH_ICON =
-  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6 4.5V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M4.5 4.5V13a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V4.5M6.5 7v4M9.5 7v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// every icon in the app (this file and index.html alike) is a Lucide
+// icon (isc license, lucide.dev) — its <path>/<circle> body pasted in
+// as-is on Lucide's own 24x24 grid, just wrapped with this app's
+// sizing/color conventions instead of Lucide's own wrapper attributes
+const svgIcon = (inner) =>
+  `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+
+const TRASH_ICON = svgIcon(
+  '<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+);
 
 const briefFieldRow = (value) => {
   const row = document.createElement("div");
@@ -321,8 +344,7 @@ const briefFieldRow = (value) => {
   return row;
 };
 
-const ADD_FIELD_ICON =
-  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor"/><path d="M8 4.5v7M4.5 8h7" stroke="currentColor" stroke-linecap="round"/></svg>';
+const ADD_FIELD_ICON = svgIcon('<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/>');
 
 const updateAddButtonState = (container, addButton) => {
   const count = container.children.length;
@@ -672,14 +694,19 @@ const resolveEntryFromRepo = async (repoInput, token = "") => {
  * renaming files to match a convention.
  */
 
-const ICON_FOLDER =
-  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5h4l1 1.5h8v6.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg>';
-const ICON_FILE_HTML =
-  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M6 8L4.5 9.5 6 11M10 8l1.5 1.5L10 11" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
-const ICON_FILE_CODE =
-  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M6.5 7.5c-1 0-1.2.8-1.2 1.5s.2 1.5 1.2 1.5M9.5 7.5c1 0 1.2.8 1.2 1.5s-.2 1.5-1.2 1.5" stroke="currentColor" stroke-linecap="round" fill="none"/></svg>';
-const ICON_FILE_PLAIN =
-  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg>';
+const ICON_FOLDER = svgIcon(
+  '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+);
+// file-code — the angle-bracket glyph reads as "markup", distinct from tsx/jsx's braces below
+const ICON_FILE_HTML = svgIcon(
+  '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/>',
+);
+const ICON_FILE_CODE = svgIcon(
+  '<path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/>',
+);
+const ICON_FILE_PLAIN = svgIcon(
+  '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/>',
+);
 
 const iconForFile = (name) => {
   if (/\.html?$/i.test(name)) return ICON_FILE_HTML;
@@ -1569,6 +1596,7 @@ const closeComposer = () => {
   anchor = null;
   el.composer.classList.add("is-hidden");
   el.commentBody.value = "";
+  el.composerSend.disabled = true;
   composerTags = [];
   renderComposerTags();
   closeComposerTagModal();
@@ -1692,6 +1720,42 @@ const renderPins = () => {
   });
 };
 
+/* ---------- "mark as unread" ----------
+ * Purely local to this browser and this review — it's a reading aid
+ * for whoever's viewing, not something that should broadcast to
+ * every other reviewer, so it never touches state.comments or the
+ * synced snapshot, just its own localStorage entry per review.
+ */
+
+const unreadStorageKey = () => `tminus.unread.${state.review.slug || "review"}`;
+
+const readUnreadIds = () => {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(unreadStorageKey()) || "[]"));
+  } catch {
+    return new Set();
+  }
+};
+
+const writeUnreadIds = (ids) => localStorage.setItem(unreadStorageKey(), JSON.stringify([...ids]));
+
+const isCommentUnread = (id) => readUnreadIds().has(id);
+
+const markCommentUnread = (id) => {
+  const ids = readUnreadIds();
+  ids.add(id);
+  writeUnreadIds(ids);
+  renderThreads();
+};
+
+const markCommentRead = (id) => {
+  const ids = readUnreadIds();
+  if (!ids.has(id)) return;
+  ids.delete(id);
+  writeUnreadIds(ids);
+  renderThreads();
+};
+
 const renderThreads = () => {
   el.threads.innerHTML = "";
   const list = visible();
@@ -1727,6 +1791,7 @@ const renderThreads = () => {
     const node = el.tpl.content.cloneNode(true);
     const article = node.querySelector(".thread");
     article.dataset.commentId = c.id;
+    article.classList.toggle("is-unread", isCommentUnread(c.id));
 
     const avatar = node.querySelector(".avatar");
     avatar.style.setProperty("--avatar-color", authorColor(c.author));
@@ -1839,7 +1904,7 @@ const closeThreadModal = () => {
   openThreadId = null;
   el.threadModal.classList.add("is-hidden");
   closeThreadTagModal();
-  el.threadModalReplyForm.classList.add("is-hidden");
+  closeThreadModalMoreMenu();
 };
 
 const renderThreadModal = () => {
@@ -1888,13 +1953,17 @@ const renderThreadModal = () => {
     el.threadModalReplies.appendChild(p);
   });
 
-  el.threadModalResolve.textContent = c.resolved ? "Reopen" : "Resolve";
+  el.threadModalResolve.classList.toggle("is-resolved", !!c.resolved);
+  el.threadModalResolve.setAttribute("aria-label", c.resolved ? "Reopen" : "Resolve");
+
+  el.threadModalReplyAvatar.style.setProperty("--avatar-color", authorColor(state.creator.name || "T"));
+  el.threadModalReplyAvatar.textContent = (state.creator.name || "T").charAt(0).toUpperCase();
 };
 
 const openThreadModal = (id) => {
   openThreadId = id;
   closeThreadTagModal();
-  el.threadModalReplyForm.classList.add("is-hidden");
+  markCommentRead(id);
   renderThreadModal();
   el.threadModal.classList.remove("is-hidden");
 };
@@ -1925,19 +1994,19 @@ wireCustomTagAdd(el.threadModalTagInput, el.threadModalTagAdd, (t) => {
   renderThreads();
 });
 
-el.threadModalReplyToggle.addEventListener("click", () => {
-  el.threadModalReplyForm.classList.toggle("is-hidden");
-  el.threadModalReplyInput.focus();
+el.threadModalReplyInput.addEventListener("input", () => {
+  el.threadModalReplySend.disabled = !el.threadModalReplyInput.value.trim();
 });
 
 el.threadModalReplyForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const c = findComment(openThreadId);
   const body = el.threadModalReplyInput.value.trim();
-  if (!c || !body || !session) return;
-  c.replies.push({ id: crypto.randomUUID(), author: session.name, body, createdAt: new Date().toISOString() });
+  if (!c || !body || !state.creator.name) return;
+  c.replies.push({ id: crypto.randomUUID(), author: state.creator.name, body, createdAt: new Date().toISOString() });
   touch(c);
   el.threadModalReplyInput.value = "";
+  el.threadModalReplySend.disabled = true;
   save();
   scheduleSync();
   renderThreadModal();
@@ -1955,10 +2024,48 @@ el.threadModalResolve.addEventListener("click", () => {
   renderThreads();
 });
 
+/* ---------- more-actions menu (⋯): copy link, mark as unread ---------- */
+
+const closeThreadModalMoreMenu = () => {
+  el.threadModalMoreMenu.classList.add("is-hidden");
+};
+
+el.threadModalMoreToggle.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const opening = el.threadModalMoreMenu.classList.contains("is-hidden");
+  closeThreadModalMoreMenu();
+  if (opening) {
+    el.threadModalMoreMenu.classList.remove("is-hidden");
+    positionBelow(el.threadModalMoreToggle, el.threadModalMoreMenu);
+    showCatcher(closeThreadModalMoreMenu, "workspace");
+  } else {
+    hideCatcher();
+  }
+});
+
+el.threadModalCopyLink.addEventListener("click", async () => {
+  closeThreadModalMoreMenu();
+  hideCatcher();
+  if (!openThreadId) return;
+  const url = `${location.origin}${location.pathname}#comment-${openThreadId}`;
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    // clipboard access denied — nothing else to fall back to here
+  }
+});
+
+el.threadModalMarkUnread.addEventListener("click", () => {
+  closeThreadModalMoreMenu();
+  hideCatcher();
+  if (openThreadId) markCommentUnread(openThreadId);
+  closeThreadModal();
+});
+
 const renderWorkspace = () => {
   el.reviewTitle.textContent = state.review.title;
   el.countdown.textContent = countdown(state.review.tzero);
-  el.voteSelect.value = (session && state.votes[session.id]) || "";
+  el.voteSelect.value = state.votes[deviceId] || "";
 
   renderPins();
   renderThreads();
@@ -2035,19 +2142,23 @@ const renderPrototypeSurface = () => {
   el.frameFallback.classList.remove("is-hidden");
 };
 
+// "Copy comment link" puts #comment-<id> in the URL — this is what
+// makes that link actually go somewhere instead of just looking like
+// one. Checked again after the first sync pull in case the linked
+// comment only exists on the synced snapshot, not locally yet.
+const openThreadFromHash = () => {
+  const match = /^#comment-(.+)$/.exec(location.hash);
+  if (match && findComment(match[1])) openThreadModal(match[1]);
+};
+
 const openWorkspace = () => {
   el.screenOnboarding.classList.add("is-hidden");
   el.screenWorkspace.classList.remove("is-hidden");
   renderWorkspace();
   renderPrototypeSurface();
   updateSyncUI();
-  pullRemoteComments();
-
-  if (!session) {
-    el.gateMeta.textContent = `${state.review.title} / ${countdown(state.review.tzero)}`;
-    el.gate.classList.remove("is-hidden");
-    el.inName.focus();
-  }
+  openThreadFromHash();
+  pullRemoteComments().then(openThreadFromHash);
 };
 
 const resetToWizard = () => {
@@ -2058,7 +2169,6 @@ const resetToWizard = () => {
   el.composer.classList.add("is-hidden");
   el.threadModal.classList.add("is-hidden");
   openThreadId = null;
-  el.gate.classList.add("is-hidden");
   el.screenWorkspace.classList.add("is-hidden");
   el.screenOnboarding.classList.remove("is-hidden");
 
@@ -2219,8 +2329,7 @@ el.detailsEdit.addEventListener("submit", async (e) => {
 /* ---------- go / no-go ---------- */
 
 const vote = (value) => {
-  if (!session) return;
-  state.votes[session.id] = value;
+  state.votes[deviceId] = value;
   save();
   scheduleSync();
   renderWorkspace();
@@ -2235,7 +2344,7 @@ el.voteSelect.addEventListener("change", () => {
 /* ---------- comment placement + composer ---------- */
 
 el.overlay.addEventListener("click", (e) => {
-  if (mode !== "comment" || !session) return;
+  if (mode !== "comment" || !state.creator.name) return;
   if (e.target.classList.contains("pin-dot")) return;
 
   const rect = el.canvas.getBoundingClientRect();
@@ -2246,6 +2355,8 @@ el.overlay.addEventListener("click", (e) => {
 
   composerTags = [];
   renderComposerTags();
+  el.composerAvatar.style.setProperty("--avatar-color", authorColor(state.creator.name || "T"));
+  el.composerAvatar.textContent = (state.creator.name || "T").charAt(0).toUpperCase();
   el.composer.classList.remove("is-hidden");
   positionComposerAt(e.clientX, e.clientY);
   el.commentBody.focus();
@@ -2254,12 +2365,12 @@ el.overlay.addEventListener("click", (e) => {
 el.composer.addEventListener("submit", (e) => {
   e.preventDefault();
   const body = el.commentBody.value.trim();
-  if (!body || !anchor || !session) return;
+  if (!body || !anchor || !state.creator.name) return;
 
   const now = new Date().toISOString();
   state.comments.push({
     id: crypto.randomUUID(),
-    author: session.name,
+    author: state.creator.name,
     body,
     tags: composerTags.map((t) => ({ ...t })),
     resolved: false,
@@ -2275,16 +2386,10 @@ el.composer.addEventListener("submit", (e) => {
   renderWorkspace();
 });
 
-el.composerCancel.addEventListener("click", closeComposer);
+el.composerClose.addEventListener("click", closeComposer);
 
-el.gateForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const name = el.inName.value.trim();
-  if (!name) return;
-  session = { id: crypto.randomUUID(), name };
-  localStorage.setItem(KEY_SESSION, JSON.stringify(session));
-  el.gate.classList.add("is-hidden");
-  renderWorkspace();
+el.commentBody.addEventListener("input", () => {
+  el.composerSend.disabled = !el.commentBody.value.trim();
 });
 
 /* ---------- boot ---------- */

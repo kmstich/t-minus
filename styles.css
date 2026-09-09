@@ -519,8 +519,11 @@ textarea::placeholder {
    alongside the normal pointer, so "adding a comment" reads
    differently from just browsing */
 .canvas.is-comment {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M3 4h18v14H10l-5 5V4z' fill='white' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='9' cy='11' r='1.4' fill='black'/%3E%3Ccircle cx='14' cy='11' r='1.4' fill='black'/%3E%3Ccircle cx='19' cy='11' r='1.4' fill='black'/%3E%3C/svg%3E")
-    4 24, pointer;
+  /* Lucide's message-square path, same white-fill/black-stroke
+     treatment as before so it stays visible over any prototype
+     background; hotspot lands near the tail's point */
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24'%3E%3Cpath d='M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z' fill='white' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")
+    2 23, pointer;
 }
 
 .canvas.is-comment .overlay {
@@ -779,6 +782,20 @@ body.is-dragging-pin * {
   gap: var(--sp-1);
 }
 
+/* "mark as unread" — local to this browser only, see markCommentUnread() */
+.thread.is-unread .thread-author {
+  font-weight: 700;
+}
+
+.thread.is-unread .thread-top::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
 .thread-body {
   font-size: var(--fs-micro);
   color: var(--label-color);
@@ -832,20 +849,8 @@ button.tag-chip {
   margin-left: var(--sp-1);
 }
 
-/* selected-tag row + the small toggle that reveals the tag-modal */
-.tag-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-2);
-}
-
-.tag-row .thread-tags {
-  margin-bottom: 0;
-  flex: 1;
-}
-
+/* the small toggle that reveals the tag-modal — lives at the trailing
+   end of .comment-input-row now, alongside the send button */
 .tag-toggle-btn {
   flex: none;
   width: 28px;
@@ -993,16 +998,6 @@ button.tag-chip {
   color: var(--ink-2);
   border-left: 1px solid var(--line-2);
   padding-left: var(--sp-2);
-}
-
-.reply-form input {
-  font-size: var(--fs-micro);
-  padding: var(--sp-1) 0;
-}
-
-.thread-acts {
-  display: flex;
-  gap: var(--sp-4);
 }
 
 /* MODALS (hamburger menu, details, go/no-go, composer) */
@@ -1175,10 +1170,87 @@ button.tag-chip {
   margin: var(--sp-3) 0;
 }
 
-.thread-modal .thread-acts {
+/* comment + new-comment modals: frosted glass with no border, a
+   divider under the header only (never at the bottom — the reply
+   row is the last thing in the modal, not set off from anything) */
+.thread-modal,
+.composer {
+  border: 0;
+}
+
+.thread-modal .modal-head,
+.composer .modal-head {
+  border-bottom: 1px solid var(--line-2);
+  padding-bottom: var(--sp-3);
+}
+
+.modal-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex: none;
+}
+
+/* resolve toggle: outline by default, filled once resolved — same
+   language as the tag chips' is-on state */
+#thread-modal-resolve.is-resolved {
+  color: var(--white);
+  background: var(--ink);
+  border-radius: 50%;
+}
+
+/* the always-visible "add a comment" / reply row: avatar, a pill
+   input that takes the remaining width, then the tag toggle and the
+   send button both trailing at its end — the one shared, consistent
+   spot for the tag button across the composer and the thread modal */
+.comment-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   margin-top: var(--sp-3);
-  padding-top: var(--sp-3);
-  border-top: 1px solid var(--line-2);
+}
+
+.comment-input-row .avatar {
+  width: 32px;
+  height: 32px;
+  font-size: var(--fs-micro);
+}
+
+.comment-input-row input,
+.comment-input-row textarea {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+  max-height: 96px;
+}
+
+.comment-input-row textarea {
+  border-bottom: 1px solid var(--line-2);
+}
+
+.send-btn {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+  color: var(--white);
+  cursor: pointer;
+}
+
+.send-btn:disabled {
+  background: var(--line-2);
+  color: var(--ink-2);
+  cursor: default;
 }
 
 .modal-head {
@@ -1266,53 +1338,9 @@ button.tag-chip {
   font-weight: 700;
 }
 
-.composer textarea {
-  border-bottom: 0;
-  margin-bottom: var(--sp-3);
-}
-
-.composer-foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: var(--sp-3);
-}
-
 .composer-btns {
   display: flex;
   gap: var(--sp-2);
-}
-
-/* GATE */
-.gate {
-  position: fixed;
-  inset: 0;
-  background: rgba(252, 252, 252, 0.94);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--sp-6);
-  z-index: 10;
-}
-
-.gate-card {
-  width: 100%;
-  max-width: 440px;
-  background: var(--white);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-btn);
-  padding: var(--sp-8);
-}
-
-.gate-card h2 {
-  font-size: var(--fs-h2);
-  letter-spacing: -0.02em;
-  margin: var(--sp-3) 0 var(--sp-5);
-}
-
-.gate-card .btn {
-  width: 100%;
-  margin-top: var(--sp-5);
 }
 
 @media (max-width: 900px) {
