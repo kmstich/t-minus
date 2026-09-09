@@ -1,6 +1,6 @@
 :root {
   /* exact palette per handed-off spec */
-  --paper: #fcfcfc; /* wizard page background */
+  --paper: #e8e8e8; /* wizard page background */
   --canvas-bg: #f7f7f7; /* workspace canvas background (distinct, slightly darker) */
   --white: #ffffff;
   --ink: #111111;
