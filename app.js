@@ -82,6 +82,7 @@ let step = 1;
 let mode = "interact";
 let anchor = null;
 let composerTags = [];
+const expandedThreads = new Set();
 
 const save = () => localStorage.setItem(KEY_STATE, JSON.stringify(state));
 const $ = (sel) => document.querySelector(sel);
@@ -747,7 +748,7 @@ const goToStep = (n) => {
 const stepValue = () =>
   ({
     1: el.inCreatorName.value.trim() && el.inCreatorEmail.value.trim() ? "ok" : "",
-    2: state.review.repo.trim() ? "ok" : "",
+    2: el.inRepo.value.trim() ? "ok" : "",
     3: state.review.resolvedKind ? "ok" : "",
     4: el.inTitle.value.trim(),
     5: el.inTzero.value.trim(),
@@ -975,6 +976,7 @@ const renderThreads = () => {
     node.querySelector(".thread-body").textContent = c.body;
 
     const detail = node.querySelector(".thread-detail");
+    detail.classList.toggle("is-hidden", !expandedThreads.has(c.id));
     const threadTags = node.querySelector(".thread-tags");
     const tagPicker = node.querySelector(".tag-picker");
     const tagOptions = tagPicker.querySelector(".tag-options");
@@ -987,7 +989,11 @@ const renderThreads = () => {
     const actReply = node.querySelector(".act-reply");
     const actResolve = node.querySelector(".act-resolve");
 
-    article.addEventListener("click", () => detail.classList.toggle("is-hidden"));
+    article.addEventListener("click", () => {
+      const nowHidden = detail.classList.toggle("is-hidden");
+      if (nowHidden) expandedThreads.delete(c.id);
+      else expandedThreads.add(c.id);
+    });
     [replyForm, tagPicker].forEach((el2) => el2.addEventListener("click", (e) => e.stopPropagation()));
 
     const refreshTags = () => {

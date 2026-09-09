@@ -894,6 +894,10 @@ button.tag-chip {
   margin-bottom: var(--sp-3);
 }
 
+#details-edit > * + * {
+  margin-top: var(--sp-3);
+}
+
 .connect-row {
   display: flex;
   align-items: center;
