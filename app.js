@@ -121,6 +121,7 @@ const el = {
   protoFrame: $("#proto-frame"),
   overlay: $("#overlay"),
   pinLayer: $("#pin-layer"),
+  pinPreview: $("#pin-preview"),
   frameFallback: $("#frame-fallback"),
   frameFallbackTitle: $("#frame-fallback-title"),
   frameFallbackBody: $("#frame-fallback-body"),
@@ -961,7 +962,87 @@ const closeComposer = () => {
   composerTags = [];
   renderComposerTags();
   closeComposerTagModal();
-  removeGuide();
+};
+
+/* ---------- pin hover preview + drag-to-reposition ----------
+ * Pins show a styled preview bubble on hover (arrow cursor — this is
+ * "opening", not dragging), and can be picked up and moved: mousedown
+ * starts tracking, and only once the pointer has actually traveled
+ * past a small threshold does it commit to a drag (cursor switches to
+ * the closed-hand "grabbing" look). Anything under that threshold is
+ * treated as a plain click that opens the comment.
+ */
+
+const PIN_DRAG_THRESHOLD = 4;
+let pinDrag = null;
+
+const showPinPreview = (dot, comment) => {
+  el.pinPreview.textContent = comment.body;
+  el.pinPreview.style.left = dot.style.left;
+  el.pinPreview.style.top = dot.style.top;
+  el.pinPreview.classList.remove("is-hidden");
+};
+
+const hidePinPreview = () => el.pinPreview.classList.add("is-hidden");
+
+const onPinDragMove = (e) => {
+  if (!pinDrag) return;
+  const dx = e.clientX - pinDrag.startX;
+  const dy = e.clientY - pinDrag.startY;
+
+  if (!pinDrag.moved && Math.hypot(dx, dy) > PIN_DRAG_THRESHOLD) {
+    pinDrag.moved = true;
+    document.body.classList.add("is-dragging-pin");
+  }
+  if (!pinDrag.moved) return;
+
+  const { rect } = pinDrag;
+  const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+  const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+  pinDrag.dot.style.left = `${x * 100}%`;
+  pinDrag.dot.style.top = `${y * 100}%`;
+  pinDrag.x = x;
+  pinDrag.y = y;
+};
+
+const onPinDragEnd = () => {
+  if (!pinDrag) return;
+  document.removeEventListener("mousemove", onPinDragMove);
+  document.removeEventListener("mouseup", onPinDragEnd);
+  document.body.classList.remove("is-dragging-pin");
+  el.overlay.classList.remove("is-tracking-pin");
+
+  const { comment, moved, x, y } = pinDrag;
+  pinDrag = null;
+
+  if (!moved) {
+    openThreadModal(comment.id);
+    return;
+  }
+
+  comment.x = x;
+  comment.y = y;
+  save();
+  scheduleSync();
+  renderPins();
+};
+
+const startPinDrag = (e, dot, comment) => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  hidePinPreview();
+  el.overlay.classList.add("is-tracking-pin");
+  pinDrag = {
+    dot,
+    comment,
+    rect: el.canvas.getBoundingClientRect(),
+    startX: e.clientX,
+    startY: e.clientY,
+    moved: false,
+  };
+  document.addEventListener("mousemove", onPinDragMove);
+  document.addEventListener("mouseup", onPinDragEnd);
 };
 
 const renderPins = () => {
@@ -974,11 +1055,9 @@ const renderPins = () => {
     dot.style.left = `${c.x * 100}%`;
     dot.style.top = `${c.y * 100}%`;
     dot.textContent = c.author.charAt(0).toUpperCase();
-    dot.title = c.body;
-    dot.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openThreadModal(c.id);
-    });
+    dot.addEventListener("mouseenter", () => showPinPreview(dot, c));
+    dot.addEventListener("mouseleave", hidePinPreview);
+    dot.addEventListener("mousedown", (e) => startPinDrag(e, dot, c));
     el.pinLayer.appendChild(dot);
   });
 };
@@ -1292,6 +1371,7 @@ const openWorkspace = () => {
   el.screenWorkspace.classList.remove("is-hidden");
   renderWorkspace();
   renderPrototypeSurface();
+  updateSyncUI();
 
   if (!session) {
     el.gateMeta.textContent = `${state.review.title} / ${countdown(state.review.tzero)}`;
@@ -1471,13 +1551,6 @@ el.voteSelect.addEventListener("change", () => {
 
 /* ---------- comment placement + composer ---------- */
 
-el.overlay.addEventListener("mousemove", (e) => {
-  if (mode !== "comment" || anchor) return;
-  positionGuide(e);
-});
-
-el.overlay.addEventListener("mouseleave", () => removeGuide());
-
 el.overlay.addEventListener("click", (e) => {
   if (mode !== "comment" || !session) return;
   if (e.target.classList.contains("pin-dot")) return;
@@ -1488,31 +1561,12 @@ el.overlay.addEventListener("click", (e) => {
     y: (e.clientY - rect.top) / rect.height,
   };
 
-  removeGuide();
   el.anchorLabel.textContent = `${Math.round(anchor.x * 100)}, ${Math.round(anchor.y * 100)}`;
   composerTags = [];
   renderComposerTags();
   el.composer.classList.remove("is-hidden");
   el.commentBody.focus();
 });
-
-let guideEl = null;
-
-const positionGuide = (e) => {
-  const rect = el.canvas.getBoundingClientRect();
-  if (!guideEl) {
-    guideEl = document.createElement("span");
-    guideEl.className = "crosshair-guide";
-    el.pinLayer.appendChild(guideEl);
-  }
-  guideEl.style.left = `${e.clientX - rect.left}px`;
-  guideEl.style.top = `${e.clientY - rect.top}px`;
-};
-
-const removeGuide = () => {
-  guideEl?.remove();
-  guideEl = null;
-};
 
 el.composer.addEventListener("submit", (e) => {
   e.preventDefault();

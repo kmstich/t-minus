@@ -497,8 +497,21 @@ textarea::placeholder {
   pointer-events: none;
 }
 
+/* while a pin is being picked up (from mousedown, before we even know
+   if it'll turn into a real drag), the overlay must capture the whole
+   canvas so mousemove keeps landing on our document instead of
+   falling through to the iframe underneath the instant the pointer
+   leaves the pin's own tiny hit-area */
+.overlay.is-tracking-pin {
+  pointer-events: auto;
+}
+
+/* comment-mode placement cursor: a small comment-bubble icon
+   alongside the normal pointer, so "adding a comment" reads
+   differently from just browsing */
 .canvas.is-comment {
-  cursor: crosshair;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M3 4h18v14H10l-5 5V4z' fill='white' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='9' cy='11' r='1.4' fill='black'/%3E%3Ccircle cx='14' cy='11' r='1.4' fill='black'/%3E%3Ccircle cx='19' cy='11' r='1.4' fill='black'/%3E%3C/svg%3E")
+    4 24, pointer;
 }
 
 .canvas.is-comment .overlay {
@@ -583,7 +596,7 @@ textarea::placeholder {
   font-weight: 500;
   color: var(--white);
   background: var(--pin-color, var(--ink));
-  cursor: pointer;
+  cursor: default;
   pointer-events: auto;
   z-index: 3;
   border: 0;
@@ -604,32 +617,32 @@ textarea::placeholder {
   box-shadow: 0 0 0 2px var(--white), 0 0 0 3px var(--red);
 }
 
-.crosshair-guide {
+/* while a pin is being dragged, force the closed-hand cursor
+   everywhere — the pointer can move off the pin itself mid-drag */
+body.is-dragging-pin,
+body.is-dragging-pin * {
+  cursor: grabbing !important;
+}
+
+/* small preview bubble shown on pin hover, replacing the native
+   title-attribute tooltip with something styled and readable */
+.pin-preview {
   position: absolute;
+  transform: translate(-50%, calc(-100% - 14px));
+  max-width: 220px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-btn);
   pointer-events: none;
-  z-index: 4;
-  transform: translate(-50%, -50%);
-}
-
-.crosshair-guide::before,
-.crosshair-guide::after {
-  content: "";
-  position: absolute;
-  background: var(--red);
-}
-
-.crosshair-guide::before {
-  width: 1px;
-  height: 16px;
-  left: 50%;
-  top: -8px;
-}
-
-.crosshair-guide::after {
-  height: 1px;
-  width: 16px;
-  top: 50%;
-  left: -8px;
+  z-index: 5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 /* SIDEBAR */
@@ -681,7 +694,20 @@ textarea::placeholder {
   font-size: var(--fs-small);
   font-weight: 700;
   color: var(--ink);
+  margin-bottom: var(--sp-2);
+}
+
+#sync-status-label {
   margin-bottom: var(--sp-4);
+}
+
+#sync-status-label.is-synced {
+  color: var(--green);
+}
+
+#sync-status-label.is-error {
+  color: var(--red);
+  font-weight: 700;
 }
 
 .sidebar-foot {

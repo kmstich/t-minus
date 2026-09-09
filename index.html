@@ -143,6 +143,7 @@
 
         <div class="overlay" id="overlay">
           <div class="pin-layer" id="pin-layer"></div>
+          <div class="pin-preview is-hidden" id="pin-preview"></div>
         </div>
 
         <pre class="source-view is-hidden" id="source-view"><code id="source-code"></code></pre>
@@ -206,6 +207,7 @@
 
         <div class="sidebar-body">
           <p class="comments-heading" id="comments-heading">Comments (0)</p>
+          <p class="micro" id="sync-status-label">Local only — no token</p>
           <div id="threads" class="threads"></div>
         </div>
 
@@ -254,7 +256,6 @@
             <input id="edit-token" type="password" placeholder="ghp_… or github_pat_…" autocomplete="off" />
           </label>
           <p class="hint">Leave blank to keep the current token. Stored only in this browser.</p>
-          <p class="micro" id="sync-status-label">Local only — no token</p>
 
           <label class="field">
             <span class="micro">Live prototype URL</span>
