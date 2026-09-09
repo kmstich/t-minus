@@ -1,6 +1,15 @@
 const KEY_STATE = "tminus.state";
 const KEY_SESSION = "tminus.session";
 const KEY_TOKEN = "tminus.token";
+const KEY_TOKEN_TOUCHED = "tminus.token.touched";
+
+// How long an idle tab keeps holding the token before treating it as
+// gone. sessionStorage already drops the token on its own the moment
+// the tab/window closes or a new one opens — that's what makes "new
+// session" wipe it for free. This idle clock covers the other half:
+// someone who leaves a tab open and unattended shouldn't have it keep
+// sitting there indefinitely with write access to their repo.
+const TOKEN_IDLE_LIMIT_MS = 30 * 60 * 1000;
 
 const STEPS = [
   {
@@ -72,12 +81,30 @@ const read = (key, fallback) => {
 
 let state = { ...blankState(), ...read(KEY_STATE, {}) };
 let session = read(KEY_SESSION, null);
-let githubToken = "";
-try {
-  githubToken = localStorage.getItem(KEY_TOKEN) || "";
-} catch {
-  githubToken = "";
-}
+
+// The token lives in sessionStorage, not localStorage: a hard refresh
+// or a normal reload within the same tab both keep it (so someone
+// mid-wizard who steps away for a minute or bumps refresh doesn't
+// have to dig their token back out), but opening a fresh tab/window —
+// a new session — starts with nothing, and the idle clock above clears
+// it out of a tab that's been sitting untouched too long.
+const readGithubToken = () => {
+  try {
+    const token = sessionStorage.getItem(KEY_TOKEN);
+    if (!token) return "";
+    const touchedAt = Number(sessionStorage.getItem(KEY_TOKEN_TOUCHED) || 0);
+    if (Date.now() - touchedAt > TOKEN_IDLE_LIMIT_MS) {
+      sessionStorage.removeItem(KEY_TOKEN);
+      sessionStorage.removeItem(KEY_TOKEN_TOUCHED);
+      return "";
+    }
+    return token;
+  } catch {
+    return "";
+  }
+};
+
+let githubToken = readGithubToken();
 let step = 1;
 let mode = "interact";
 let anchor = null;
@@ -613,10 +640,26 @@ const scanForExistingReviews = async (repoInput) => {
 const setGithubToken = (token) => {
   githubToken = token || "";
   try {
-    if (githubToken) localStorage.setItem(KEY_TOKEN, githubToken);
-    else localStorage.removeItem(KEY_TOKEN);
+    if (githubToken) {
+      sessionStorage.setItem(KEY_TOKEN, githubToken);
+      sessionStorage.setItem(KEY_TOKEN_TOUCHED, String(Date.now()));
+    } else {
+      sessionStorage.removeItem(KEY_TOKEN);
+      sessionStorage.removeItem(KEY_TOKEN_TOUCHED);
+    }
   } catch {
-    // localStorage unavailable — token still works for this page load
+    // sessionStorage unavailable — token still works for this page load
+  }
+};
+
+// resets the idle clock on every authenticated call, so a tab that's
+// actively syncing never loses its token mid-use, only one left idle
+const touchGithubToken = () => {
+  if (!githubToken) return;
+  try {
+    sessionStorage.setItem(KEY_TOKEN_TOUCHED, String(Date.now()));
+  } catch {
+    // sessionStorage unavailable — nothing to touch
   }
 };
 
@@ -632,6 +675,7 @@ const b64DecodeUnicode = (str) =>
   );
 
 const ghAuthFetch = async (path, token, options = {}) => {
+  touchGithubToken();
   const res = await fetch(`https://api.github.com/${path}`, {
     ...options,
     headers: {
