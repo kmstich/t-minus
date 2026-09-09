@@ -20,16 +20,17 @@
   --sans: "Helvetica for Target", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --mono: "Helvetica for Target", "Helvetica Neue", ui-monospace, Menlo, monospace;
 
-  --fs-display: 96px;
-  --fs-h1: 64px;
-  --fs-h2: 48px;
-  --fs-h3: 32px;
-  --fs-h4: 24px;
-  --fs-body-lg: 20px;
-  --fs-body: 16px;
-  --fs-small: 14px;
-  --fs-micro: 12px;
-  --fs-wizard-h1: 44px;
+  /* type scale — kept to 6 sizes on purpose. Default color per size:
+     micro/small default to ink-2 (labels, meta, hints, secondary
+     info); body and up default to ink (primary content, headings).
+     Deviations (a name, a button, a tag's own color, an error/link
+     accent) are deliberate, not inconsistency. */
+  --fs-wizard-h1: 44px; /* the one "hero" size — the big onboarding question */
+  --fs-h4: 24px; /* the one section-heading size — summary card title */
+  --fs-body-lg: 20px; /* comfortable-typing size — focus-area inputs only */
+  --fs-body: 16px; /* primary reading size — most content */
+  --fs-small: 14px; /* secondary headings — comments count, canvas HUD, source code */
+  --fs-micro: 12px; /* labels, meta, chips — everything else */
 
   --sp-1: 4px;
   --sp-2: 8px;
@@ -877,12 +878,12 @@ button.tag-chip {
   margin-left: var(--sp-1);
 }
 
-/* the small toggle that reveals the tag-modal — lives at the trailing
-   end of .comment-input-row now, alongside the send button */
+/* the toggle that reveals the tag-modal — trails the send button at
+   the end of .comment-input-row, sized to match it exactly */
 .tag-toggle-btn {
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1472,8 +1473,10 @@ button.tag-chip {
   }
 
   .wizard-head h1 {
-    font-size: var(--fs-h2);
-    min-height: calc(var(--fs-h2) * 1.15 * 2);
+    /* scales down from the desktop size rather than introducing a
+       separate mobile-only type-scale step */
+    font-size: calc(var(--fs-wizard-h1) * 0.75);
+    min-height: calc(var(--fs-wizard-h1) * 0.75 * 1.15 * 2);
   }
 
   .masthead-inner {

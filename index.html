@@ -396,18 +396,18 @@
         <div class="comment-input-row">
           <span class="avatar" id="composer-avatar"></span>
           <textarea id="comment-body" rows="1" placeholder="Add a comment"></textarea>
+          <button type="submit" class="send-btn" id="composer-send" aria-label="Post comment" disabled>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m5 12 7-7 7 7" />
+              <path d="M12 19V5" />
+            </svg>
+          </button>
           <button type="button" class="tag-toggle-btn" id="composer-tag-toggle" aria-label="Tags">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path
                 d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
               />
               <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
-            </svg>
-          </button>
-          <button type="submit" class="send-btn" id="composer-send" aria-label="Post comment" disabled>
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="m5 12 7-7 7 7" />
-              <path d="M12 19V5" />
             </svg>
           </button>
         </div>
@@ -463,18 +463,18 @@
         <form class="comment-input-row" id="thread-modal-reply-form">
           <span class="avatar" id="thread-modal-reply-avatar"></span>
           <input type="text" id="thread-modal-reply-input" placeholder="Reply" autocomplete="off" />
+          <button type="submit" class="send-btn" id="thread-modal-reply-send" aria-label="Send reply" disabled>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m5 12 7-7 7 7" />
+              <path d="M12 19V5" />
+            </svg>
+          </button>
           <button type="button" class="tag-toggle-btn" id="thread-modal-tag-toggle" aria-label="Tags">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path
                 d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
               />
               <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
-            </svg>
-          </button>
-          <button type="submit" class="send-btn" id="thread-modal-reply-send" aria-label="Send reply" disabled>
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="m5 12 7-7 7 7" />
-              <path d="M12 19V5" />
             </svg>
           </button>
         </form>
