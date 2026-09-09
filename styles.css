@@ -15,6 +15,7 @@
   --cyan: #009dd2;
   --amber: #ffae0d;
   --red: #e30039;
+  --red-orange: #e8491d; /* No-go, once cast — distinct from --red's crimson (errors/blockers) */
   --radius-btn: 6px;
 
   --sans: "Helvetica for Target", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -1449,18 +1450,22 @@ button.tag-chip {
   flex: 1;
 }
 
-.readout {
-  display: flex;
-  gap: var(--sp-6);
-  flex-wrap: wrap;
+/* color only applies once a vote is cast, and only to the option
+   that's actually active — same green as the wizard progress bar for
+   Go, a distinct red-orange (not the crimson used for errors
+   elsewhere) for No-go */
+#vote-go.is-on {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--white);
 }
 
-.readout dd {
-  font-size: var(--fs-body);
-  margin-top: var(--sp-1);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
+#vote-nogo.is-on {
+  background: var(--red-orange);
+  border-color: var(--red-orange);
+  color: var(--white);
 }
+
 
 .composer-btns {
   display: flex;

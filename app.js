@@ -212,9 +212,6 @@ const el = {
   editAddBriefField: $("#edit-add-brief-field"),
   cancelEditDetails: $("#cancel-edit-details"),
 
-  statOpen: $("#stat-open"),
-  statBlockers: $("#stat-blockers"),
-  statVotes: $("#stat-votes"),
 
   composer: $("#composer"),
   composerAvatar: $("#composer-avatar"),
@@ -1630,13 +1627,6 @@ el.btnBack.addEventListener("click", () => {
 
 /* ---------- workspace ---------- */
 
-const counts = () => ({
-  open: state.comments.filter((c) => !c.resolved).length,
-  blockers: state.comments.filter((c) => !c.resolved && isBlocker(c)).length,
-  go: Object.values(state.votes).filter((v) => v === "go").length,
-  nogo: Object.values(state.votes).filter((v) => v === "nogo").length,
-});
-
 const visible = () => state.comments.filter((c) => state.showResolved || !c.resolved);
 
 const renderComposerTags = () => {
@@ -1865,7 +1855,6 @@ const markCommentRead = (id) => {
 const renderThreads = () => {
   el.threads.innerHTML = "";
   const list = visible();
-  const n = counts();
   el.commentsHeading.textContent = `Comments (${list.length + 1})`;
 
   // synthetic pinned entry surfacing the review brief, authored by the
@@ -1914,10 +1903,6 @@ const renderThreads = () => {
 
     el.threads.appendChild(node);
   });
-
-  el.statOpen.textContent = n.open;
-  el.statBlockers.textContent = n.blockers;
-  el.statVotes.textContent = `${n.go} / ${n.nogo}`;
 };
 
 /* ---------- shared tag child-modal positioning ----------
@@ -2174,9 +2159,20 @@ const renderWorkspace = () => {
   el.reviewTitle.textContent = state.review.title;
   el.countdown.textContent = countdown(state.review.tzero);
 
+  // the tally only shows up once this device has voted — cast a vote
+  // to see where things stand, rather than the count sitting there
+  // (previously in a separate Open/Blockers/Go-no-go readout) for
+  // anyone to read off without participating
   const myVote = state.votes[deviceId] || "";
+  const voteValues = Object.values(state.votes);
+  const goCount = voteValues.filter((v) => v === "go").length;
+  const nogoCount = voteValues.filter((v) => v === "nogo").length;
+
+  el.voteGo.textContent = myVote ? `Go · ${goCount}` : "Go";
   el.voteGo.classList.toggle("is-on", myVote === "go");
   el.voteGo.setAttribute("aria-pressed", String(myVote === "go"));
+
+  el.voteNogo.textContent = myVote ? `No-go · ${nogoCount}` : "No-go";
   el.voteNogo.classList.toggle("is-on", myVote === "nogo");
   el.voteNogo.setAttribute("aria-pressed", String(myVote === "nogo"));
 
