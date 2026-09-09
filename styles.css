@@ -151,10 +151,10 @@ textarea {
   line-height: 1.15;
   letter-spacing: -0.02em;
   margin: var(--sp-3) 0 var(--sp-3);
-  max-width: 20ch;
+  max-width: 720px;
   color: var(--ink);
   /* reserves 2 lines so shorter/longer step titles don't shift the
-     progress bar and form below as you move between steps */
+     lede and form below as you move between steps */
   min-height: calc(var(--fs-wizard-h1) * 1.15 * 2);
 }
 
@@ -194,8 +194,10 @@ textarea {
   width: 200px;
   height: 8px;
   background: var(--line);
-  margin: var(--sp-6) 0 var(--sp-8);
+  border-radius: 999px;
+  margin: var(--sp-3) 0 var(--sp-6);
   position: relative;
+  overflow: hidden;
 }
 
 .progress-fill {
