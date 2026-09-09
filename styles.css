@@ -1028,6 +1028,54 @@ button.tag-chip {
   width: 400px;
 }
 
+/* top-level, above both screens outright (see the HTML comment on
+   this element for why) rather than sharing either screen's stacking
+   context the way the tag/menu popovers have to */
+#file-picker-modal {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 440px;
+  z-index: 9;
+}
+
+#file-picker-search {
+  width: 100%;
+  margin-bottom: var(--sp-3);
+}
+
+.file-picker-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.file-picker-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--line-2);
+  font-size: var(--fs-micro);
+  font-family: inherit;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  color: var(--ink);
+  cursor: pointer;
+  word-break: break-all;
+}
+
+.file-picker-row:last-child {
+  border-bottom: 0;
+}
+
+.file-picker-row:hover {
+  color: var(--blue);
+}
+
 /* composer is positioned in JS so its top-right corner lands on the
    canvas point that was clicked, not centered like the other modals */
 .composer {
@@ -1113,6 +1161,13 @@ button.tag-chip {
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-4);
+}
+
+.connect-row .micro-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex: none;
 }
 
 /* MODE TOOLBAR — bottom-left of the canvas, replaces the old

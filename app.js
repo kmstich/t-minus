@@ -137,6 +137,11 @@ const el = {
   resolveRepoLabel: $("#resolve-repo-label"),
   resolveNote: $("#resolve-note"),
   btnResolve: $("#btn-resolve"),
+
+  filePickerModal: $("#file-picker-modal"),
+  filePickerClose: $("#file-picker-close"),
+  filePickerSearch: $("#file-picker-search"),
+  filePickerList: $("#file-picker-list"),
   inTitle: $("#in-title"),
   titleCharCount: $("#title-char-count"),
   inTzero: $("#in-tzero"),
@@ -181,6 +186,7 @@ const el = {
   detailsEdit: $("#details-edit"),
   editRepo: $("#edit-repo"),
   editResolveBtn: $("#edit-resolve"),
+  editResolveManualBtn: $("#edit-resolve-manual"),
   editResolveStatus: $("#edit-resolve-status"),
   editToken: $("#edit-token"),
   syncStatusLabel: $("#sync-status-label"),
@@ -586,24 +592,12 @@ const findEntryFile = async (owner, repo, token = "") => {
   return null;
 };
 
-const resolveEntryFromRepo = async (repoInput, token = "") => {
-  const parsed = parseGithubRepo(repoInput);
-  if (!parsed) return { error: "Not a valid GitHub repository URL" };
-
-  let entry;
-  try {
-    entry = await findEntryFile(parsed.owner, parsed.repo, token);
-  } catch (err) {
-    return { error: describeFetchError(err) };
-  }
-
-  if (!entry) {
-    return {
-      error:
-        "No entry file found. Looked for index.html at the root (or /public, /dist, /build) and App.tsx at the root or /src. Rename or move your entry file to match.",
-    };
-  }
-
+// fetches an already-located file (entry = {kind, path, downloadUrl})
+// and wraps it into the shape the workspace expects — shared by the
+// naming-convention auto-detect below and the manual file picker,
+// since both end up with the same {kind, path, downloadUrl} once
+// they've found a candidate, just by different routes
+const fetchResolvedFile = async (entry, token = "") => {
   let fileRes;
   let text;
   try {
@@ -624,6 +618,135 @@ const resolveEntryFromRepo = async (repoInput, token = "") => {
 
   return { kind: "source", path: entry.path, source: text };
 };
+
+const resolveEntryFromRepo = async (repoInput, token = "") => {
+  const parsed = parseGithubRepo(repoInput);
+  if (!parsed) return { error: "Not a valid GitHub repository URL" };
+
+  let entry;
+  try {
+    entry = await findEntryFile(parsed.owner, parsed.repo, token);
+  } catch (err) {
+    return { error: describeFetchError(err) };
+  }
+
+  if (!entry) {
+    return {
+      error:
+        "No entry file found by naming convention (index.html at the root, /public, /dist, or /build; App.tsx at the root or /src). Use \"Choose file\" to pick the right one yourself.",
+    };
+  }
+
+  return fetchResolvedFile(entry, token);
+};
+
+/* ---------- manual file picker ----------
+ * The fallback for when naming-convention auto-detect can't find a
+ * build (a nonstandard layout) or found the wrong one. Lists every
+ * file in the repo's default branch via the git trees API and lets
+ * the user click the real one directly, rather than being stuck
+ * renaming files to match a convention.
+ */
+
+const listRepoFiles = async (owner, repo, token) => {
+  const authHeaders = token ? { Authorization: `token ${token}` } : {};
+  const repoRes = await fetchWithRetry(`https://api.github.com/repos/${owner}/${repo}`, {
+    headers: { Accept: "application/vnd.github+json", ...authHeaders },
+  });
+  if (!repoRes.ok) throw new Error(describeGithubError(repoRes.status, !!token));
+  const { default_branch } = await repoRes.json();
+
+  const treeRes = await fetchWithRetry(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(default_branch)}?recursive=1`,
+    { headers: { Accept: "application/vnd.github+json", ...authHeaders } },
+  );
+  if (!treeRes.ok) throw new Error(describeGithubError(treeRes.status, !!token));
+  const tree = await treeRes.json();
+  return (tree.tree || []).filter((e) => e.type === "blob").map((e) => e.path);
+};
+
+// same {kind, path, html|source}/{error} shape as resolveEntryFromRepo,
+// so both can be applied to state.review the same way
+const resolveManualFile = async (owner, repo, path, token) => {
+  let info;
+  try {
+    const res = await fetchWithRetry(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+      headers: { Accept: "application/vnd.github+json", ...(token ? { Authorization: `token ${token}` } : {}) },
+    });
+    if (!res.ok) return { error: describeGithubError(res.status, !!token) };
+    info = await res.json();
+  } catch (err) {
+    return { error: describeFetchError(err) };
+  }
+  const kind = /\.html?$/i.test(path) ? "html" : "source";
+  return fetchResolvedFile({ kind, path, downloadUrl: info.download_url }, token);
+};
+
+let filePickerFiles = [];
+let filePickerOnPick = null;
+
+const closeFilePicker = () => {
+  el.filePickerModal.classList.add("is-hidden");
+  hideCatcher();
+};
+
+const renderFilePickerList = (query) => {
+  const q = query.trim().toLowerCase();
+  const matches = (q ? filePickerFiles.filter((f) => f.toLowerCase().includes(q)) : filePickerFiles).slice(0, 200);
+
+  el.filePickerList.innerHTML = "";
+  if (!matches.length) {
+    const empty = document.createElement("p");
+    empty.className = "micro";
+    empty.textContent = filePickerFiles.length ? "No files match." : "No files found in this repository.";
+    el.filePickerList.appendChild(empty);
+    return;
+  }
+
+  matches.forEach((path) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "file-picker-row";
+    row.textContent = path;
+    row.addEventListener("click", () => filePickerOnPick?.(path));
+    el.filePickerList.appendChild(row);
+  });
+};
+
+// onPick(path) applies the chosen file to state.review; the wizard
+// and the Details panel each pass their own, since the surrounding
+// status UI differs, but both end up calling resolveManualFile
+const openFilePicker = async (repoValue, onPick) => {
+  const parsed = parseGithubRepo(repoValue);
+  if (!parsed) return;
+
+  filePickerOnPick = onPick;
+  el.filePickerSearch.value = "";
+  filePickerFiles = [];
+  el.filePickerList.innerHTML = "";
+  const loading = document.createElement("p");
+  loading.className = "micro";
+  loading.textContent = "Loading file list…";
+  el.filePickerList.appendChild(loading);
+
+  el.filePickerModal.classList.remove("is-hidden");
+  showCatcher(closeFilePicker);
+  el.filePickerSearch.focus();
+
+  try {
+    filePickerFiles = await listRepoFiles(parsed.owner, parsed.repo, githubToken);
+    renderFilePickerList("");
+  } catch (err) {
+    el.filePickerList.innerHTML = "";
+    const errNode = document.createElement("p");
+    errNode.className = "warning";
+    errNode.textContent = describeFetchError(err);
+    el.filePickerList.appendChild(errNode);
+  }
+};
+
+el.filePickerClose.addEventListener("click", closeFilePicker);
+el.filePickerSearch.addEventListener("input", () => renderFilePickerList(el.filePickerSearch.value));
 
 /* ---------- discovering an existing review on this repo ----------
  * A teammate pasting the same repo URL has no way to know someone
@@ -945,6 +1068,7 @@ const pullRemoteComments = async () => {
 
 el.inRepo.addEventListener("input", () => {
   state.review.repoConnected = false;
+  autoResolveAttemptedFor = "";
 });
 
 /* ---------- existing-review modal ---------- */
@@ -1012,13 +1136,7 @@ const joinExistingReview = async (snap) => {
     state.review.resolvedHtml = "";
     state.review.resolvedSource = "";
   } else {
-    const result = await resolveEntryFromRepo(repo, githubToken);
-    if (!result.error) {
-      state.review.resolvedKind = result.kind;
-      state.review.resolvedPath = result.path;
-      state.review.resolvedHtml = result.kind === "html" ? result.html : "";
-      state.review.resolvedSource = result.kind === "source" ? result.source : "";
-    }
+    applyResolveResult(await resolveEntryFromRepo(repo, githubToken));
   }
 
   state.created = true;
@@ -1050,7 +1168,27 @@ el.inTitle.addEventListener("input", updateTitleCharCount);
 
 /* ---------- wizard: step 3, resolve entry file ---------- */
 
+// shared by auto-detect and the manual picker — both produce the same
+// {kind, path, html|source} / {error} shape, this is just what happens
+// to state.review once one of them has an answer
+const applyResolveResult = (result) => {
+  if (result.error) {
+    state.review.resolvedKind = null;
+    state.review.resolvedPath = "";
+    state.review.resolvedHtml = "";
+    state.review.resolvedSource = "";
+  } else {
+    state.review.resolvedKind = result.kind;
+    state.review.resolvedPath = result.path;
+    state.review.resolvedHtml = result.kind === "html" ? result.html : "";
+    state.review.resolvedSource = result.kind === "source" ? result.source : "";
+  }
+  save();
+};
+
 const renderResolveStatus = () => {
+  el.btnResolve.textContent = state.review.resolvedKind ? "Choose a different file" : "Choose file";
+
   if (state.review.resolvedKind === "html") {
     el.resolveStatus.textContent = state.review.resolvedPath;
     el.resolveNote.classList.add("is-hidden");
@@ -1069,31 +1207,29 @@ const runResolve = async (repoValue) => {
   el.resolveStatus.textContent = "Searching…";
   el.resolveNote.classList.add("is-hidden");
 
-  try {
-    const result = await resolveEntryFromRepo(repoValue, githubToken);
-    if (result.error) {
-      state.review.resolvedKind = null;
-      state.review.resolvedPath = "";
-      state.review.resolvedHtml = "";
-      state.review.resolvedSource = "";
-      el.resolveStatus.textContent = "Not resolved";
-      el.resolveNote.textContent = result.error;
-      el.resolveNote.classList.remove("is-hidden");
-    } else {
-      state.review.resolvedKind = result.kind;
-      state.review.resolvedPath = result.path;
-      state.review.resolvedHtml = result.kind === "html" ? result.html : "";
-      state.review.resolvedSource = result.kind === "source" ? result.source : "";
-      renderResolveStatus();
-    }
-  } catch (err) {
+  const result = await resolveEntryFromRepo(repoValue, githubToken);
+  applyResolveResult(result);
+
+  if (result.error) {
     el.resolveStatus.textContent = "Not resolved";
-    el.resolveNote.textContent = describeFetchError(err);
+    el.resolveNote.textContent = result.error;
     el.resolveNote.classList.remove("is-hidden");
-  } finally {
-    el.btnResolve.disabled = false;
-    save();
+  } else {
+    renderResolveStatus();
   }
+  el.btnResolve.disabled = false;
+};
+
+// runs automatically the first time step 3 is shown for a given repo,
+// so reaching this step no longer requires clicking anything — the
+// button only comes into play as the manual fallback below
+let autoResolveAttemptedFor = "";
+
+const autoResolveIfNeeded = () => {
+  const repo = state.review.repo || el.inRepo.value.trim();
+  if (!repo || !parseGithubRepo(repo) || state.review.resolvedKind || autoResolveAttemptedFor === repo) return;
+  autoResolveAttemptedFor = repo;
+  runResolve(repo);
 };
 
 el.btnResolve.addEventListener("click", () => {
@@ -1104,7 +1240,20 @@ el.btnResolve.addEventListener("click", () => {
     el.resolveNote.classList.remove("is-hidden");
     return;
   }
-  runResolve(repo);
+  openFilePicker(repo, async (path) => {
+    closeFilePicker();
+    const parsed = parseGithubRepo(repo);
+    el.resolveStatus.textContent = "Loading…";
+    const result = await resolveManualFile(parsed.owner, parsed.repo, path, githubToken);
+    applyResolveResult(result);
+    if (result.error) {
+      el.resolveStatus.textContent = "Not resolved";
+      el.resolveNote.textContent = result.error;
+      el.resolveNote.classList.remove("is-hidden");
+    } else {
+      renderResolveStatus();
+    }
+  });
 });
 
 /* ---------- wizard flow ---------- */
@@ -1187,7 +1336,10 @@ const renderStep = () => {
   el.btnBack.classList.toggle("is-hidden", step === 1);
   el.btnNext.textContent = step === STEPS.length ? "Open Review" : "Continue";
 
-  if (step === 3) renderResolveStatus();
+  if (step === 3) {
+    renderResolveStatus();
+    autoResolveIfNeeded();
+  }
   if (step === STEPS.length) renderSummary();
 };
 
@@ -1885,6 +2037,17 @@ el.editUrl.addEventListener("input", () => {
   el.editUrlWarning.classList.toggle("is-hidden", !looksLikeGithubRepoPage(el.editUrl.value));
 });
 
+// applyResolveResult() has already saved state.review by the time this
+// runs — this only updates the status text and the live preview
+const renderEditResolveStatus = (result) => {
+  if (result.error) {
+    el.editResolveStatus.textContent = result.error;
+  } else {
+    el.editResolveStatus.textContent = `Resolved — ${result.path} (${result.kind === "html" ? "rendered" : "source only"})`;
+  }
+  if (!el.editUrl.value.trim()) renderPrototypeSurface();
+};
+
 el.editResolveBtn.addEventListener("click", async (e) => {
   e.preventDefault();
   const repo = el.editRepo.value.trim();
@@ -1894,29 +2057,26 @@ el.editResolveBtn.addEventListener("click", async (e) => {
   }
 
   el.editResolveStatus.textContent = "Searching…";
-  let result;
-  try {
-    result = await resolveEntryFromRepo(repo, githubToken);
-  } catch (err) {
-    result = { error: describeFetchError(err) };
-  }
+  const result = await resolveEntryFromRepo(repo, githubToken);
+  applyResolveResult(result);
+  renderEditResolveStatus(result);
+});
 
-  if (result.error) {
-    state.review.resolvedKind = null;
-    state.review.resolvedPath = "";
-    state.review.resolvedHtml = "";
-    state.review.resolvedSource = "";
-    el.editResolveStatus.textContent = result.error;
-  } else {
-    state.review.resolvedKind = result.kind;
-    state.review.resolvedPath = result.path;
-    state.review.resolvedHtml = result.kind === "html" ? result.html : "";
-    state.review.resolvedSource = result.kind === "source" ? result.source : "";
-    el.editResolveStatus.textContent = `Resolved — ${result.path} (${result.kind === "html" ? "rendered" : "source only"})`;
+el.editResolveManualBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  const repo = el.editRepo.value.trim();
+  if (!repo) {
+    el.editResolveStatus.textContent = "Enter a repository first";
+    return;
   }
-
-  save();
-  if (!el.editUrl.value.trim()) renderPrototypeSurface();
+  openFilePicker(repo, async (path) => {
+    closeFilePicker();
+    const parsed = parseGithubRepo(repo);
+    el.editResolveStatus.textContent = "Loading…";
+    const result = await resolveManualFile(parsed.owner, parsed.repo, path, githubToken);
+    applyResolveResult(result);
+    renderEditResolveStatus(result);
+  });
 });
 
 el.detailsEdit.addEventListener("submit", async (e) => {

@@ -137,14 +137,14 @@
             <label class="field">
               <span class="micro">Prototype file</span>
               <div class="field-row">
-                <span id="resolve-status">Not resolved</span>
-                <button type="button" class="link action-link" id="btn-resolve">Find build</button>
+                <span id="resolve-status">Searching…</span>
+                <button type="button" class="link action-link" id="btn-resolve">Choose file</button>
               </div>
             </label>
             <p class="hint">
-              T-Minus defaults to naming convention Index.html at the root or inside /public, /dist,
-              /build), then App.tsx at the root or inside /src. Name your entry file to match one of
-              these so it resolves properly or choose the correct live file.
+              T-Minus looks for index.html at the root (or inside /public, /dist, /build), then
+              App.tsx at the root or inside /src, automatically. If it can't find one that way —
+              or it found the wrong one — use "Choose file" to pick the right one from the repo.
             </p>
             <p class="warning is-hidden" id="resolve-note"></p>
             <p class="micro is-hidden" id="resolve-repo-label"></p>
@@ -320,7 +320,10 @@
           </label>
           <div class="connect-row">
             <p class="hint">Changing this invalidates the current access grant.</p>
-            <button type="button" class="link action-link" id="edit-resolve">Re-check entry file</button>
+            <div class="micro-row">
+              <button type="button" class="link action-link" id="edit-resolve">Re-check entry file</button>
+              <button type="button" class="link action-link" id="edit-resolve-manual">Choose file</button>
+            </div>
           </div>
           <p class="micro" id="edit-resolve-status"></p>
 
@@ -476,6 +479,20 @@
          catcher outside screen-workspace's stacking context can never
          be outranked by a popover inside it. -->
     <div class="click-catcher is-hidden" id="click-catcher"></div>
+
+    <!-- MANUAL FILE PICKER — fallback for when the naming-convention
+         auto-detect can't find a build. Opened from either the wizard
+         (screen-onboarding) or the Details panel (screen-workspace), so
+         it's a top-level element with a z-index high enough to clear
+         both screens outright, rather than living inside either one. -->
+    <div class="modal is-hidden" id="file-picker-modal">
+      <div class="modal-head">
+        <span class="micro">Choose the build file</span>
+        <button type="button" class="link micro" id="file-picker-close">Close</button>
+      </div>
+      <input type="text" id="file-picker-search" placeholder="Filter files…" autocomplete="off" />
+      <div class="file-picker-list" id="file-picker-list"></div>
+    </div>
 
     <!-- NAME GATE -->
     <div class="gate is-hidden" id="gate">
