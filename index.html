@@ -67,7 +67,12 @@
           <div class="modal tag-modal is-hidden" id="token-info-modal">
             <div class="modal-head">
               <span class="micro">Getting a token</span>
-              <button type="button" class="link micro" id="token-info-close">Close</button>
+              <button type="button" class="icon-close-btn" id="token-info-close" aria-label="Close">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
             </div>
             <ol class="info-steps">
               <li>
@@ -118,7 +123,12 @@
           <div class="modal is-hidden" id="existing-review-modal">
             <div class="modal-head">
               <span class="micro">Existing review found</span>
-              <button type="button" class="link micro" id="existing-review-close">Close</button>
+              <button type="button" class="icon-close-btn" id="existing-review-close" aria-label="Close">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
             </div>
             <p class="hint">
               This repo already has a review. Join one to see and add to the same
@@ -240,8 +250,8 @@
         </div>
 
         <!-- MODE TOOLBAR -->
-        <div class="mode-toolbar" id="mode-toolbar" role="group" aria-label="Review mode">
-          <button type="button" class="mode-btn is-on" id="mode-interact" aria-label="Inspect">
+        <div class="segmented mode-toolbar" id="mode-toolbar" role="group" aria-label="Review mode">
+          <button type="button" class="segmented-btn is-on" id="mode-interact" aria-label="Inspect">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path
                 d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"
@@ -249,7 +259,7 @@
             </svg>
             <span>Inspect</span>
           </button>
-          <button type="button" class="mode-btn" id="mode-comment" aria-label="Comment">
+          <button type="button" class="segmented-btn" id="mode-comment" aria-label="Comment">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path
                 d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"
@@ -275,24 +285,26 @@
 
         <div class="sidebar-body">
           <p class="comments-heading" id="comments-heading">Comments (0)</p>
-          <p class="micro" id="sync-status-label">Local only — no token</p>
           <div id="threads" class="threads"></div>
         </div>
 
         <div class="sidebar-foot">
-          <label class="field">
-            <span class="micro">Is this file ready to go?</span>
-            <select class="vote-select" id="vote-select">
-              <option value="">— Cast your vote —</option>
-              <option value="go">Go</option>
-              <option value="nogo">No-go</option>
-            </select>
-          </label>
+          <div class="field">
+            <span class="micro">Ready to go?</span>
+            <div class="segmented vote-toggle" id="vote-toggle" role="group" aria-label="Go / no-go vote">
+              <button type="button" class="segmented-btn" id="vote-go" aria-pressed="false">Go</button>
+              <button type="button" class="segmented-btn" id="vote-nogo" aria-pressed="false">No-go</button>
+            </div>
+          </div>
           <dl class="readout">
             <div><dt class="micro">Open</dt><dd id="stat-open">0</dd></div>
             <div><dt class="micro">Blockers</dt><dd id="stat-blockers">0</dd></div>
             <div><dt class="micro">Go / no-go</dt><dd id="stat-votes">0 / 0</dd></div>
           </dl>
+          <p class="sync-status" id="sync-status-label">
+            <span class="sync-status-icon" id="sync-status-icon"></span>
+            <span id="sync-status-text">Not synced</span>
+          </p>
         </div>
       </aside>
 
@@ -305,7 +317,12 @@
       <div class="modal is-hidden" id="details-panel">
         <div class="modal-head">
           <p class="micro">Review details</p>
-          <button type="button" class="link micro" id="close-details">Close</button>
+          <button type="button" class="icon-close-btn" id="close-details" aria-label="Close">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
         </div>
 
         <form id="details-edit">
@@ -465,7 +482,12 @@
       <div class="modal tag-modal is-hidden" id="composer-tag-modal">
         <div class="modal-head">
           <span class="micro">Tags</span>
-          <button type="button" class="link micro" id="composer-tag-modal-close">Close</button>
+          <button type="button" class="icon-close-btn" id="composer-tag-modal-close" aria-label="Close">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
         </div>
         <div class="tag-options" id="composer-tag-options"></div>
         <div class="tag-add-row">
@@ -478,7 +500,12 @@
       <div class="modal tag-modal is-hidden" id="thread-tag-modal">
         <div class="modal-head">
           <span class="micro">Tags</span>
-          <button type="button" class="link micro" id="thread-tag-modal-close">Close</button>
+          <button type="button" class="icon-close-btn" id="thread-tag-modal-close" aria-label="Close">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
         </div>
         <div class="tag-options" id="thread-modal-tag-options"></div>
         <div class="tag-add-row">

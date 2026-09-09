@@ -185,7 +185,8 @@ const el = {
   hamburgerBtn: $("#hamburger-btn"),
   commentsHeading: $("#comments-heading"),
   threads: $("#threads"),
-  voteSelect: $("#vote-select"),
+  voteGo: $("#vote-go"),
+  voteNogo: $("#vote-nogo"),
 
   menuModal: $("#menu-modal"),
   modeInteract: $("#mode-interact"),
@@ -201,6 +202,8 @@ const el = {
   editResolveStatus: $("#edit-resolve-status"),
   editToken: $("#edit-token"),
   syncStatusLabel: $("#sync-status-label"),
+  syncStatusIcon: $("#sync-status-icon"),
+  syncStatusText: $("#sync-status-text"),
   editUrl: $("#edit-url"),
   editUrlWarning: $("#edit-url-warning"),
   editTitle: $("#edit-title"),
@@ -1006,21 +1009,37 @@ let syncTimer = null;
 let syncStatus = "idle"; // idle | pending | syncing | synced | error | nocreds
 let syncMessage = "";
 
+const SYNC_ICON_CHECK = svgIcon('<circle cx="12" cy="12" r="10"/><path d="m16 9-5.5 5.5L8 12"/>');
+const SYNC_ICON_ALERT = svgIcon('<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>');
+const SYNC_ICON_SPIN = svgIcon('<path d="M21 12a9 9 0 1 1-6.219-8.56"/>');
+const SYNC_ICON_IDLE = svgIcon('<circle cx="12" cy="12" r="10"/>');
+
+// full detail (the file path, the exact error) used to live in this
+// text and read as noise for something that's supposed to be a quiet
+// footer status — kept to a two/three-word label plus a state icon
 const updateSyncUI = () => {
   if (!el.syncStatusLabel) return;
   el.syncStatusLabel.classList.remove("is-synced", "is-error");
+  el.syncStatusIcon.classList.remove("is-spinning");
 
-  if (syncStatus === "nocreds") el.syncStatusLabel.textContent = "Not shared — add a token to let others see your comments";
-  else if (syncStatus === "pending") el.syncStatusLabel.textContent = "Sync pending…";
-  else if (syncStatus === "syncing") el.syncStatusLabel.textContent = "Syncing…";
-  else if (syncStatus === "synced") {
-    el.syncStatusLabel.textContent = `Synced · ${syncMessage}`;
+  if (syncStatus === "nocreds") {
+    el.syncStatusIcon.innerHTML = SYNC_ICON_IDLE;
+    el.syncStatusText.textContent = "Not shared";
+  } else if (syncStatus === "pending" || syncStatus === "syncing") {
+    el.syncStatusIcon.innerHTML = SYNC_ICON_SPIN;
+    el.syncStatusIcon.classList.add("is-spinning");
+    el.syncStatusText.textContent = "Syncing…";
+  } else if (syncStatus === "synced") {
+    el.syncStatusIcon.innerHTML = SYNC_ICON_CHECK;
+    el.syncStatusText.textContent = "Synced";
     el.syncStatusLabel.classList.add("is-synced");
   } else if (syncStatus === "error") {
-    el.syncStatusLabel.textContent = `Sync failed — ${syncMessage}`;
+    el.syncStatusIcon.innerHTML = SYNC_ICON_ALERT;
+    el.syncStatusText.textContent = "Sync failed";
     el.syncStatusLabel.classList.add("is-error");
   } else {
-    el.syncStatusLabel.textContent = "Not synced yet";
+    el.syncStatusIcon.innerHTML = SYNC_ICON_IDLE;
+    el.syncStatusText.textContent = "Not synced";
   }
 };
 
@@ -2065,7 +2084,12 @@ el.threadModalMarkUnread.addEventListener("click", () => {
 const renderWorkspace = () => {
   el.reviewTitle.textContent = state.review.title;
   el.countdown.textContent = countdown(state.review.tzero);
-  el.voteSelect.value = state.votes[deviceId] || "";
+
+  const myVote = state.votes[deviceId] || "";
+  el.voteGo.classList.toggle("is-on", myVote === "go");
+  el.voteGo.setAttribute("aria-pressed", String(myVote === "go"));
+  el.voteNogo.classList.toggle("is-on", myVote === "nogo");
+  el.voteNogo.setAttribute("aria-pressed", String(myVote === "nogo"));
 
   renderPins();
   renderThreads();
@@ -2329,17 +2353,17 @@ el.detailsEdit.addEventListener("submit", async (e) => {
 /* ---------- go / no-go ---------- */
 
 const vote = (value) => {
-  state.votes[deviceId] = value;
+  if (value) state.votes[deviceId] = value;
+  else delete state.votes[deviceId];
   save();
   scheduleSync();
   renderWorkspace();
 };
 
-el.voteSelect.addEventListener("change", () => {
-  const value = el.voteSelect.value;
-  if (!value) return;
-  vote(value);
-});
+// clicking the already-active option clears the vote; clicking the
+// other one switches to it — a plain toggle, no separate "unvote" control
+el.voteGo.addEventListener("click", () => vote(state.votes[deviceId] === "go" ? "" : "go"));
+el.voteNogo.addEventListener("click", () => vote(state.votes[deviceId] === "nogo" ? "" : "nogo"));
 
 /* ---------- comment placement + composer ---------- */
 

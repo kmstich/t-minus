@@ -709,8 +709,36 @@ body.is-dragging-pin * {
   margin-bottom: var(--sp-2);
 }
 
-#sync-status-label {
-  margin-bottom: var(--sp-4);
+/* sync status: bottom of the sidebar, one icon + a two/three-word
+   label — the file path and exact error used to live here, which
+   read as noise for what's meant to be a quiet, glanceable footer */
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--ink-2);
+}
+
+.sync-status-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.sync-status-icon .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.sync-status-icon.is-spinning {
+  animation: sync-spin 1s linear infinite;
+}
+
+@keyframes sync-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 #sync-status-label.is-synced {
@@ -1048,10 +1076,16 @@ button.tag-chip {
   padding-bottom: var(--sp-3);
 }
 
+/* the one close/header-icon button used everywhere a modal needs to
+   be dismissed (or, for the thread modal's ⋯ and resolve, needs a
+   same-sized sibling next to it) — a plain icon that fills into a
+   circle on hover/focus, same motif as the resolve icon's filled
+   state once it's actually toggled on */
 .icon-close-btn {
   flex: none;
   width: 24px;
   height: 24px;
+  border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1062,8 +1096,10 @@ button.tag-chip {
   cursor: pointer;
 }
 
-.icon-close-btn:hover {
+.icon-close-btn:hover,
+.icon-close-btn:focus-visible {
   color: var(--ink);
+  background: var(--paper);
 }
 
 .file-picker-list {
@@ -1283,24 +1319,22 @@ button.tag-chip {
   flex: none;
 }
 
-/* MODE TOOLBAR — bottom-left of the canvas, replaces the old
-   menu-buried Interact/Comment segmented control */
-.mode-toolbar {
-  position: fixed;
-  left: var(--sp-4);
-  bottom: var(--sp-4);
-  z-index: 4;
+/* SEGMENTED CONTROL — one shared black-border/pill toggle used by
+   both the canvas mode switcher (Inspect/Comment) and the sidebar's
+   Go/No-go vote, so the two read as the same kind of control instead
+   of a custom toolbar next to a bare native <select> */
+.segmented {
   display: inline-flex;
   background: var(--white);
   border: 1px solid var(--ink);
   border-radius: var(--radius-btn);
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(var(--ink-rgb), 0.12);
 }
 
-.mode-btn {
+.segmented-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--sp-2);
   border: 0;
   background: transparent;
@@ -1311,18 +1345,33 @@ button.tag-chip {
   color: var(--ink);
 }
 
-.mode-btn + .mode-btn {
+.segmented-btn + .segmented-btn {
   border-left: 1px solid var(--ink);
 }
 
-.mode-btn.is-on {
+.segmented-btn.is-on {
   background: var(--ink);
   color: var(--white);
 }
 
-/* "Ready to go?" vote dropdown, replacing the old go/no-go modal */
-.vote-select {
-  cursor: pointer;
+/* mode toolbar: same segmented control, floated over the canvas */
+.mode-toolbar {
+  position: fixed;
+  left: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: 4;
+  box-shadow: 0 8px 24px rgba(var(--ink-rgb), 0.12);
+}
+
+/* vote toggle: same segmented control, stretched to the sidebar's
+   width with both options equal width, replacing the old
+   <select>-with-a-placeholder-option pattern */
+.vote-toggle {
+  width: 100%;
+}
+
+.vote-toggle .segmented-btn {
+  flex: 1;
 }
 
 .readout {
