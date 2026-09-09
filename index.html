@@ -312,6 +312,42 @@
           </div>
         </div>
       </form>
+
+      <!-- THREAD MODAL (opens on click of a comment row or pin) -->
+      <div class="modal thread-modal is-hidden" id="thread-modal">
+        <div class="modal-head">
+          <span class="micro">Comment</span>
+          <button type="button" class="link micro" id="close-thread-modal">Close</button>
+        </div>
+
+        <div class="thread-top">
+          <span class="avatar" id="thread-modal-avatar"></span>
+          <p class="thread-author" id="thread-modal-author"></p>
+          <span class="thread-dot">·</span>
+          <span class="thread-meta" id="thread-modal-meta"></span>
+        </div>
+        <p class="thread-body" id="thread-modal-text"></p>
+
+        <div class="thread-tags" id="thread-modal-tags"></div>
+        <div class="tag-picker is-hidden" id="thread-modal-tag-picker">
+          <div class="tag-options" id="thread-modal-tag-options"></div>
+          <div class="tag-add-row">
+            <input type="text" id="thread-modal-tag-input" placeholder="Custom tag" maxlength="24" />
+            <button type="button" class="link micro" id="thread-modal-tag-add">Add</button>
+          </div>
+        </div>
+
+        <div class="replies" id="thread-modal-replies"></div>
+        <form class="reply-form is-hidden" id="thread-modal-reply-form">
+          <input type="text" id="thread-modal-reply-input" placeholder="Reply" />
+        </form>
+
+        <div class="thread-acts">
+          <button type="button" class="link micro" id="thread-modal-reply-toggle">Reply</button>
+          <button type="button" class="link micro" id="thread-modal-resolve">Resolve</button>
+          <button type="button" class="link micro" id="thread-modal-tag-toggle">Tags</button>
+        </div>
+      </div>
     </main>
 
     <!-- NAME GATE -->
@@ -334,26 +370,7 @@
           <span class="thread-meta"></span>
         </div>
         <p class="thread-body"></p>
-
-        <div class="thread-detail is-hidden">
-          <div class="thread-tags"></div>
-          <div class="tag-picker is-hidden">
-            <div class="tag-options"></div>
-            <div class="tag-add-row">
-              <input type="text" placeholder="Custom tag" maxlength="24" />
-              <button type="button" class="link micro tag-add-btn">Add</button>
-            </div>
-          </div>
-          <div class="replies"></div>
-          <form class="reply-form is-hidden">
-            <input type="text" placeholder="Reply" />
-          </form>
-          <div class="thread-acts">
-            <button type="button" class="link micro act-reply">Reply</button>
-            <button type="button" class="link micro act-resolve">Resolve</button>
-            <button type="button" class="link micro act-tag-toggle">Tags</button>
-          </div>
-        </div>
+        <div class="thread-tags"></div>
       </article>
     </template>
 

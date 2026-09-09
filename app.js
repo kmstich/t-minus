@@ -82,7 +82,7 @@ let step = 1;
 let mode = "interact";
 let anchor = null;
 let composerTags = [];
-const expandedThreads = new Set();
+let openThreadId = null;
 
 const save = () => localStorage.setItem(KEY_STATE, JSON.stringify(state));
 const $ = (sel) => document.querySelector(sel);
@@ -175,6 +175,24 @@ const el = {
   composerTagInput: $("#composer-tag-input"),
   composerTagAdd: $("#composer-tag-add"),
   composerCancel: $("#composer-cancel"),
+
+  threadModal: $("#thread-modal"),
+  closeThreadModal: $("#close-thread-modal"),
+  threadModalAvatar: $("#thread-modal-avatar"),
+  threadModalAuthor: $("#thread-modal-author"),
+  threadModalMeta: $("#thread-modal-meta"),
+  threadModalText: $("#thread-modal-text"),
+  threadModalTags: $("#thread-modal-tags"),
+  threadModalTagPicker: $("#thread-modal-tag-picker"),
+  threadModalTagOptions: $("#thread-modal-tag-options"),
+  threadModalTagInput: $("#thread-modal-tag-input"),
+  threadModalTagAdd: $("#thread-modal-tag-add"),
+  threadModalReplies: $("#thread-modal-replies"),
+  threadModalReplyForm: $("#thread-modal-reply-form"),
+  threadModalReplyInput: $("#thread-modal-reply-input"),
+  threadModalReplyToggle: $("#thread-modal-reply-toggle"),
+  threadModalResolve: $("#thread-modal-resolve"),
+  threadModalTagToggle: $("#thread-modal-tag-toggle"),
 
   gate: $("#gate"),
   gateForm: $("#gate-form"),
@@ -919,9 +937,7 @@ const renderPins = () => {
     dot.title = c.body;
     dot.addEventListener("click", (e) => {
       e.stopPropagation();
-      const node = el.threads.querySelector(`[data-comment-id="${c.id}"]`);
-      node?.scrollIntoView({ behavior: "smooth", block: "center" });
-      node?.querySelector(".thread-detail")?.classList.remove("is-hidden");
+      openThreadModal(c.id);
     });
     el.pinLayer.appendChild(dot);
   });
@@ -974,92 +990,9 @@ const renderThreads = () => {
         ? `${relativeTime(c.createdAt)} · blocker`
         : relativeTime(c.createdAt);
     node.querySelector(".thread-body").textContent = c.body;
+    renderTagList(node.querySelector(".thread-tags"), c.tags);
 
-    const detail = node.querySelector(".thread-detail");
-    detail.classList.toggle("is-hidden", !expandedThreads.has(c.id));
-    const threadTags = node.querySelector(".thread-tags");
-    const tagPicker = node.querySelector(".tag-picker");
-    const tagOptions = tagPicker.querySelector(".tag-options");
-    const tagInput = tagPicker.querySelector(".tag-add-row input");
-    const tagAddBtn = tagPicker.querySelector(".tag-add-btn");
-    const actTagToggle = node.querySelector(".act-tag-toggle");
-    const replyForm = node.querySelector(".reply-form");
-    const replyInput = replyForm.querySelector("input");
-    const replies = node.querySelector(".replies");
-    const actReply = node.querySelector(".act-reply");
-    const actResolve = node.querySelector(".act-resolve");
-
-    article.addEventListener("click", () => {
-      const nowHidden = detail.classList.toggle("is-hidden");
-      if (nowHidden) expandedThreads.delete(c.id);
-      else expandedThreads.add(c.id);
-    });
-    [replyForm, tagPicker].forEach((el2) => el2.addEventListener("click", (e) => e.stopPropagation()));
-
-    const refreshTags = () => {
-      renderTagList(threadTags, c.tags, {
-        removable: true,
-        onRemove: (t) => {
-          c.tags = c.tags.filter((existing) => existing.id !== t.id);
-          save();
-          scheduleSync();
-          refreshTags();
-        },
-      });
-      renderTagOptions(tagOptions, c.tags, (t) => {
-        const idx = c.tags.findIndex((existing) => existing.id === t.id);
-        if (idx === -1) c.tags.push(t);
-        else c.tags.splice(idx, 1);
-        save();
-        scheduleSync();
-        refreshTags();
-      });
-    };
-    refreshTags();
-
-    wireCustomTagAdd(tagInput, tagAddBtn, (t) => {
-      c.tags.push(t);
-      save();
-      scheduleSync();
-      refreshTags();
-    });
-
-    actTagToggle.addEventListener("click", (e) => {
-      e.stopPropagation();
-      tagPicker.classList.toggle("is-hidden");
-    });
-
-    c.replies.forEach((r) => {
-      const p = document.createElement("p");
-      p.className = "reply";
-      p.textContent = `${r.author}: ${r.body}`;
-      replies.appendChild(p);
-    });
-
-    actReply.addEventListener("click", (e) => {
-      e.stopPropagation();
-      replyForm.classList.toggle("is-hidden");
-      replyInput.focus();
-    });
-
-    replyForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const body = replyInput.value.trim();
-      if (!body || !session) return;
-      c.replies.push({ author: session.name, body });
-      save();
-      scheduleSync();
-      renderWorkspace();
-    });
-
-    actResolve.textContent = c.resolved ? "Reopen" : "Resolve";
-    actResolve.addEventListener("click", (e) => {
-      e.stopPropagation();
-      c.resolved = !c.resolved;
-      save();
-      scheduleSync();
-      renderWorkspace();
-    });
+    article.addEventListener("click", () => openThreadModal(c.id));
 
     el.threads.appendChild(node);
   });
@@ -1068,6 +1001,119 @@ const renderThreads = () => {
   el.statBlockers.textContent = n.blockers;
   el.statVotes.textContent = `${n.go} / ${n.nogo}`;
 };
+
+/* ---------- thread modal — each comment opens as its own modal
+   rather than expanding inline in the sidebar ---------- */
+
+const findComment = (id) => state.comments.find((c) => c.id === id);
+
+const closeThreadModal = () => {
+  openThreadId = null;
+  el.threadModal.classList.add("is-hidden");
+  el.threadModalTagPicker.classList.add("is-hidden");
+  el.threadModalReplyForm.classList.add("is-hidden");
+};
+
+const renderThreadModal = () => {
+  const c = findComment(openThreadId);
+  if (!c) {
+    closeThreadModal();
+    return;
+  }
+  c.tags = c.tags || [];
+
+  el.threadModalAvatar.style.setProperty("--avatar-color", authorColor(c.author));
+  el.threadModalAvatar.textContent = c.author.charAt(0).toUpperCase();
+  el.threadModalAuthor.textContent = c.author;
+  el.threadModalMeta.textContent = c.resolved
+    ? `${relativeTime(c.createdAt)} · resolved`
+    : c.blocker
+      ? `${relativeTime(c.createdAt)} · blocker`
+      : relativeTime(c.createdAt);
+  el.threadModalText.textContent = c.body;
+
+  renderTagList(el.threadModalTags, c.tags, {
+    removable: true,
+    onRemove: (t) => {
+      c.tags = c.tags.filter((existing) => existing.id !== t.id);
+      save();
+      scheduleSync();
+      renderThreadModal();
+      renderThreads();
+    },
+  });
+  renderTagOptions(el.threadModalTagOptions, c.tags, (t) => {
+    const idx = c.tags.findIndex((existing) => existing.id === t.id);
+    if (idx === -1) c.tags.push(t);
+    else c.tags.splice(idx, 1);
+    save();
+    scheduleSync();
+    renderThreadModal();
+    renderThreads();
+  });
+
+  el.threadModalReplies.innerHTML = "";
+  c.replies.forEach((r) => {
+    const p = document.createElement("p");
+    p.className = "reply";
+    p.textContent = `${r.author}: ${r.body}`;
+    el.threadModalReplies.appendChild(p);
+  });
+
+  el.threadModalResolve.textContent = c.resolved ? "Reopen" : "Resolve";
+};
+
+const openThreadModal = (id) => {
+  openThreadId = id;
+  el.threadModalTagPicker.classList.add("is-hidden");
+  el.threadModalReplyForm.classList.add("is-hidden");
+  renderThreadModal();
+  el.threadModal.classList.remove("is-hidden");
+};
+
+el.closeThreadModal.addEventListener("click", closeThreadModal);
+
+el.threadModalTagToggle.addEventListener("click", () => {
+  el.threadModalTagPicker.classList.toggle("is-hidden");
+});
+
+wireCustomTagAdd(el.threadModalTagInput, el.threadModalTagAdd, (t) => {
+  const c = findComment(openThreadId);
+  if (!c) return;
+  c.tags.push(t);
+  save();
+  scheduleSync();
+  renderThreadModal();
+  renderThreads();
+});
+
+el.threadModalReplyToggle.addEventListener("click", () => {
+  el.threadModalReplyForm.classList.toggle("is-hidden");
+  el.threadModalReplyInput.focus();
+});
+
+el.threadModalReplyForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const c = findComment(openThreadId);
+  const body = el.threadModalReplyInput.value.trim();
+  if (!c || !body || !session) return;
+  c.replies.push({ author: session.name, body });
+  el.threadModalReplyInput.value = "";
+  save();
+  scheduleSync();
+  renderThreadModal();
+  renderThreads();
+});
+
+el.threadModalResolve.addEventListener("click", () => {
+  const c = findComment(openThreadId);
+  if (!c) return;
+  c.resolved = !c.resolved;
+  save();
+  scheduleSync();
+  renderThreadModal();
+  renderThreads();
+});
 
 const renderWorkspace = () => {
   el.reviewTitle.textContent = state.review.title;
@@ -1172,6 +1218,8 @@ const resetToWizard = () => {
   el.detailsPanel.classList.add("is-hidden");
   el.goModal.classList.add("is-hidden");
   el.composer.classList.add("is-hidden");
+  el.threadModal.classList.add("is-hidden");
+  openThreadId = null;
   el.gate.classList.add("is-hidden");
   el.screenWorkspace.classList.add("is-hidden");
   el.screenOnboarding.classList.remove("is-hidden");
