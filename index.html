@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>T-Minus</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="masthead-inner">
+        <div class="wordmark">
+          <span>T-Minus</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ONBOARDING -->
+    <main class="screen" id="screen-onboarding">
+      <section class="wizard">
+        <div class="wizard-head">
+          <p class="micro" id="step-index">Step 1 / 7</p>
+          <h1 id="step-title">Welcome! What's your name?</h1>
+          <p class="lede" id="step-lede">
+            This is so T-Minus can put a name to the project and send you updates to comments.
+          </p>
+        </div>
+
+        <div class="progress" aria-hidden="true">
+          <span class="progress-fill" id="progress-fill"></span>
+        </div>
+
+        <form id="wizard-form" novalidate>
+          <!-- 1 -->
+          <fieldset class="step is-active" data-step="1">
+            <label class="field">
+              <span class="micro">Name</span>
+              <input id="in-creator-name" type="text" placeholder="Kevin Stich" />
+            </label>
+            <label class="field">
+              <span class="micro">Email</span>
+              <input id="in-creator-email" type="email" placeholder="kevin.stich@target.com" />
+            </label>
+          </fieldset>
+
+          <!-- 2 -->
+          <fieldset class="step" data-step="2">
+            <label class="field">
+              <span class="micro">Github link</span>
+              <input id="in-repo" type="url" placeholder="https://github.com/team/checkout-prototype" />
+            </label>
+          </fieldset>
+
+          <!-- 3 -->
+          <fieldset class="step" data-step="3">
+            <label class="field">
+              <span class="micro">Prototype file</span>
+              <div class="field-row">
+                <span id="resolve-status">Not resolved</span>
+                <button type="button" class="link action-link" id="btn-resolve">Find build</button>
+              </div>
+            </label>
+            <p class="hint">
+              T-Minus defaults to naming convention Index.html at the root or inside /public, /dist,
+              /build), then App.tsx at the root or inside /src. Name your entry file to match one of
+              these so it resolves properly or choose the correct live file.
+            </p>
+            <p class="warning is-hidden" id="resolve-note"></p>
+            <p class="micro is-hidden" id="resolve-repo-label"></p>
+          </fieldset>
+
+          <!-- 4 -->
+          <fieldset class="step" data-step="4">
+            <label class="field">
+              <span class="micro">Name</span>
+              <input id="in-title" type="text" placeholder="Checkout Redesign" />
+            </label>
+            <p class="hint">This field is required.</p>
+          </fieldset>
+
+          <!-- 5 -->
+          <fieldset class="step" data-step="5">
+            <label class="field">
+              <span class="micro">Date</span>
+              <input id="in-tzero" type="date" />
+            </label>
+            <p class="hint">Commenting will close on this day.</p>
+          </fieldset>
+
+          <!-- 6 -->
+          <fieldset class="step" data-step="6">
+            <label class="field">
+              <span class="micro">Focus areas (required)</span>
+              <div class="checklist" id="brief-checklist"></div>
+            </label>
+            <button type="button" class="link action-link add-field-link" id="add-brief-field">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+                <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" />
+                <path d="M8 4.5v7M4.5 8h7" stroke="currentColor" stroke-linecap="round" />
+              </svg>
+              Add focus area
+            </button>
+          </fieldset>
+
+          <!-- 7 -->
+          <fieldset class="step" data-step="7">
+            <div class="summary-card">
+              <h2 id="summary-title">Review</h2>
+              <dl class="spec" id="summary-spec"></dl>
+              <div class="summary-focus">
+                <p class="micro">Focus areas</p>
+                <ul id="summary-focus-list"></ul>
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="wizard-actions">
+            <button type="button" class="btn btn-quiet" id="btn-back">Back</button>
+            <button type="button" class="btn btn-solid" id="btn-next">Continue</button>
+          </div>
+          <p class="error micro" id="wizard-error"></p>
+        </form>
+      </section>
+    </main>
+
+    <!-- WORKSPACE -->
+    <main class="workspace is-hidden" id="screen-workspace">
+      <div class="canvas" id="canvas">
+        <iframe
+          id="proto-frame"
+          class="proto-frame"
+          title="Prototype under review"
+          referrerpolicy="no-referrer"
+        ></iframe>
+
+        <div class="overlay" id="overlay">
+          <div class="pin-layer" id="pin-layer"></div>
+        </div>
+
+        <pre class="source-view is-hidden" id="source-view"><code id="source-code"></code></pre>
+
+        <div class="frame-fallback is-hidden" id="frame-fallback">
+          <p class="micro" id="frame-fallback-title">Prototype not reachable</p>
+          <p class="sub" id="frame-fallback-body">
+            The URL didn't load in a frame. It may block embedding, or it may not be a live,
+            browser-accessible build.
+          </p>
+          <a class="link action-link is-hidden" id="frame-fallback-link" href="#" target="_blank" rel="noopener">
+            Open in new tab
+          </a>
+        </div>
+
+        <!-- floating brand + countdown over the canvas -->
+        <div class="canvas-hud">
+          <span class="canvas-brand">T-Minus</span>
+          <span class="canvas-countdown" id="countdown">00:00:00</span>
+        </div>
+      </div>
+
+      <!-- RIGHT SIDEBAR -->
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <h2 id="review-title">Review</h2>
+          <button type="button" class="icon-btn" id="hamburger-btn" aria-label="Menu">
+            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="sidebar-body">
+          <p class="comments-heading" id="comments-heading">Comments (0)</p>
+          <div id="threads" class="threads"></div>
+        </div>
+
+        <div class="sidebar-foot">
+          <p class="micro">Is this file ready to go?</p>
+          <button type="button" class="btn btn-launch" id="ready-to-launch">Ready to Launch</button>
+        </div>
+      </aside>
+
+      <!-- HAMBURGER MENU -->
+      <div class="modal menu-modal is-hidden" id="menu-modal">
+        <div class="modal-head">
+          <p class="micro">Menu</p>
+          <button type="button" class="link micro" id="close-menu">Close</button>
+        </div>
+
+        <div class="menu-section">
+          <p class="micro">Mode</p>
+          <div class="seg" role="group" aria-label="Review mode">
+            <button type="button" class="seg-btn is-on" id="mode-interact">Interact</button>
+            <button type="button" class="seg-btn" id="mode-comment">Comment</button>
+          </div>
+        </div>
+
+        <div class="menu-section">
+          <p class="micro" id="who">No session</p>
+          <button type="button" class="link micro" id="new-session">New session</button>
+        </div>
+
+        <div class="menu-section">
+          <button type="button" class="link micro" id="toggle-resolved">Show resolved</button>
+        </div>
+
+        <div class="menu-section">
+          <button type="button" class="link micro" id="edit-details">Review details</button>
+        </div>
+
+        <div class="menu-section">
+          <button type="button" class="link micro" id="new-review">Start a new review</button>
+        </div>
+      </div>
+
+      <!-- DETAILS / EDIT MODAL -->
+      <div class="modal is-hidden" id="details-panel">
+        <div class="modal-head">
+          <p class="micro">Review details</p>
+          <button type="button" class="link micro" id="close-details">Close</button>
+        </div>
+
+        <form id="details-edit">
+          <label class="field">
+            <span class="micro">Repository</span>
+            <input id="edit-repo" type="url" />
+          </label>
+          <div class="connect-row">
+            <p class="hint">Changing this invalidates the current access grant.</p>
+            <button type="button" class="link action-link" id="edit-resolve">Re-check entry file</button>
+          </div>
+          <p class="micro" id="edit-resolve-status"></p>
+
+          <label class="field">
+            <span class="micro">GitHub token (optional)</span>
+            <input id="edit-token" type="password" placeholder="ghp_… or github_pat_…" autocomplete="off" />
+          </label>
+          <p class="hint">Leave blank to keep the current token. Stored only in this browser.</p>
+          <p class="micro" id="sync-status-label">Local only — no token</p>
+
+          <label class="field">
+            <span class="micro">Live prototype URL</span>
+            <input id="edit-url" type="url" />
+          </label>
+          <p class="warning is-hidden" id="edit-url-warning">
+            That looks like a repository page, not a live build. Use a deployed URL instead.
+          </p>
+
+          <label class="field">
+            <span class="micro">Review name</span>
+            <input id="edit-title" type="text" />
+          </label>
+
+          <label class="field">
+            <span class="micro">T-zero / target launch</span>
+            <input id="edit-tzero" type="date" />
+          </label>
+
+          <label class="field">
+            <span class="micro">Feedback focus</span>
+            <div class="checklist" id="edit-brief-checklist"></div>
+            <button type="button" class="link action-link add-field-link" id="edit-add-brief-field">+ Add another</button>
+          </label>
+
+          <div class="composer-btns">
+            <button type="button" class="btn btn-quiet" id="cancel-edit-details">Cancel</button>
+            <button type="submit" class="btn btn-solid">Save changes</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- GO / NO-GO MODAL -->
+      <div class="modal go-modal is-hidden" id="go-modal">
+        <div class="modal-head">
+          <p class="micro">Ready to launch?</p>
+          <button type="button" class="link micro" id="close-go">Close</button>
+        </div>
+        <p class="hint">Votes are anonymous to the review team.</p>
+        <div class="vote">
+          <button type="button" class="vote-btn" id="vote-go">Go</button>
+          <button type="button" class="vote-btn" id="vote-nogo">No-go</button>
+        </div>
+        <dl class="readout">
+          <div><dt class="micro">Open</dt><dd id="stat-open">0</dd></div>
+          <div><dt class="micro">Blockers</dt><dd id="stat-blockers">0</dd></div>
+          <div><dt class="micro">Go / no-go</dt><dd id="stat-votes">0 / 0</dd></div>
+        </dl>
+      </div>
+
+      <!-- COMMENT COMPOSER MODAL -->
+      <form class="modal composer is-hidden" id="composer">
+        <div class="modal-head">
+          <span class="micro">New comment</span>
+          <span class="micro" id="anchor-label">—</span>
+        </div>
+        <textarea id="comment-body" rows="3" placeholder="What isn't working here?"></textarea>
+
+        <div class="tag-picker">
+          <div class="tag-options" id="composer-tag-options"></div>
+          <div class="tag-add-row">
+            <input type="text" id="composer-tag-input" placeholder="Custom tag" maxlength="24" />
+            <button type="button" class="link micro" id="composer-tag-add">Add</button>
+          </div>
+        </div>
+
+        <div class="composer-foot">
+          <label class="check micro">
+            <input type="checkbox" id="comment-blocker" />
+            Blocker
+          </label>
+          <div class="composer-btns">
+            <button type="button" class="btn btn-quiet" id="composer-cancel">Cancel</button>
+            <button type="submit" class="btn btn-solid">Post</button>
+          </div>
+        </div>
+      </form>
+    </main>
+
+    <!-- NAME GATE -->
+    <div class="gate is-hidden" id="gate">
+      <form class="gate-card" id="gate-form">
+        <p class="micro" id="gate-meta">—</p>
+        <h2>What should we call you?</h2>
+        <input id="in-name" type="text" maxlength="32" placeholder="Kevin" />
+        <button type="submit" class="btn btn-solid">Start review</button>
+        <p class="hint">No account. Stored in this browser only.</p>
+      </form>
+    </div>
+
+    <template id="tpl-thread">
+      <article class="thread">
+        <div class="thread-top">
+          <span class="avatar"></span>
+          <p class="thread-author"></p>
+          <span class="thread-dot">·</span>
+          <span class="thread-meta"></span>
+        </div>
+        <p class="thread-body"></p>
+
+        <div class="thread-detail is-hidden">
+          <div class="thread-tags"></div>
+          <div class="tag-picker is-hidden">
+            <div class="tag-options"></div>
+            <div class="tag-add-row">
+              <input type="text" placeholder="Custom tag" maxlength="24" />
+              <button type="button" class="link micro tag-add-btn">Add</button>
+            </div>
+          </div>
+          <div class="replies"></div>
+          <form class="reply-form is-hidden">
+            <input type="text" placeholder="Reply" />
+          </form>
+          <div class="thread-acts">
+            <button type="button" class="link micro act-reply">Reply</button>
+            <button type="button" class="link micro act-resolve">Resolve</button>
+            <button type="button" class="link micro act-tag-toggle">Tags</button>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
