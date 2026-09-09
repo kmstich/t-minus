@@ -546,6 +546,14 @@ const setGithubToken = (token) => {
 const b64EncodeUnicode = (str) =>
   btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, hex) => String.fromCharCode(`0x${hex}`)));
 
+const b64DecodeUnicode = (str) =>
+  decodeURIComponent(
+    atob(str.replace(/\n/g, ""))
+      .split("")
+      .map((c) => `%${c.charCodeAt(0).toString(16).padStart(2, "0")}`)
+      .join(""),
+  );
+
 const ghAuthFetch = async (path, token, options = {}) => {
   const res = await fetch(`https://api.github.com/${path}`, {
     ...options,
@@ -623,7 +631,7 @@ const updateSyncUI = () => {
   if (!el.syncStatusLabel) return;
   el.syncStatusLabel.classList.remove("is-synced", "is-error");
 
-  if (syncStatus === "nocreds") el.syncStatusLabel.textContent = "Local only — no token";
+  if (syncStatus === "nocreds") el.syncStatusLabel.textContent = "Not shared — add a token to let others see your comments";
   else if (syncStatus === "pending") el.syncStatusLabel.textContent = "Sync pending…";
   else if (syncStatus === "syncing") el.syncStatusLabel.textContent = "Syncing…";
   else if (syncStatus === "synced") {
@@ -693,6 +701,90 @@ const scheduleSync = () => {
   updateSyncUI();
   clearTimeout(syncTimer);
   syncTimer = setTimeout(runSync, 1200);
+};
+
+/* ---------- pulling other reviewers' comments back in ----------
+ * The write side (above) pushes this browser's comments/votes to
+ * .tminus/<slug>/comments.json on the tminus-<slug> branch. Without a
+ * read side, that file was a write-only backup nobody ever saw — this
+ * fetches it back and merges it into local state, so multiple people
+ * commenting on the same repo actually see each other. Reading is
+ * anonymous (works for any public repo) when there's no token, and
+ * goes through the authenticated Contents API — needed for private
+ * repos — when there is one.
+ */
+
+const fetchRemoteSnapshot = async (owner, repo, slug) => {
+  const branch = `tminus-${slug}`;
+  const path = `.tminus/${slug}/comments.json`;
+  try {
+    if (githubToken) {
+      const res = await ghAuthFetch(`repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`, githubToken);
+      if (!res.ok) return null;
+      const json = await res.json();
+      return JSON.parse(b64DecodeUnicode(json.content));
+    }
+    const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+};
+
+// merges one comment thread from each side field-by-field, rather than
+// picking one side wholesale — a naive last-write-wins would silently
+// drop a reply or tag the other side added concurrently
+const mergeComment = (local, remote) => {
+  const tagMap = new Map();
+  [...(remote.tags || []), ...(local.tags || [])].forEach((t) => tagMap.set(t.id, t));
+
+  const replyMap = new Map();
+  [...(remote.replies || []), ...(local.replies || [])].forEach((r) => {
+    const key = r.id || `${r.author}:${r.body}:${r.createdAt || ""}`;
+    replyMap.set(key, r);
+  });
+  const replies = [...replyMap.values()].sort(
+    (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
+  );
+
+  const newer =
+    new Date(local.updatedAt || local.createdAt) >= new Date(remote.updatedAt || remote.createdAt) ? local : remote;
+
+  return {
+    ...remote,
+    ...local,
+    resolved: newer.resolved,
+    tags: [...tagMap.values()],
+    replies,
+    updatedAt: newer.updatedAt || newer.createdAt,
+  };
+};
+
+const mergeComments = (localComments, remoteComments) => {
+  const byId = new Map();
+  remoteComments.forEach((c) => byId.set(c.id, c));
+  localComments.forEach((c) => {
+    const existing = byId.get(c.id);
+    byId.set(c.id, existing ? mergeComment(c, existing) : c);
+  });
+  return [...byId.values()];
+};
+
+const pullRemoteComments = async () => {
+  if (!state.created || !state.review.repo || !state.review.repoConnected) return;
+  const parsed = parseGithubRepo(state.review.repo);
+  if (!parsed) return;
+
+  const slug = state.review.slug || slugify(state.review.title || "review");
+  const snapshot = await fetchRemoteSnapshot(parsed.owner, parsed.repo, slug);
+  if (!snapshot) return;
+
+  state.comments = mergeComments(state.comments, snapshot.comments || []);
+  state.votes = { ...(snapshot.votes || {}), ...state.votes };
+  save();
+  renderWorkspace();
+  if (openThreadId) renderThreadModal();
 };
 
 /* ---------- wizard: step 2, repo access (single-button, no visible
@@ -1196,6 +1288,13 @@ el.clickCatcher.addEventListener("click", () => {
 
 const findComment = (id) => state.comments.find((c) => c.id === id);
 
+// bumped on every mutation so merges with a synced remote copy can tell
+// which side's version of a comment (resolved state, etc.) is newer
+const touch = (c) => {
+  c.updatedAt = new Date().toISOString();
+  return c;
+};
+
 const closeThreadTagModal = () => {
   el.threadTagModal.classList.add("is-hidden");
   hideCatcher();
@@ -1230,6 +1329,7 @@ const renderThreadModal = () => {
     removable: true,
     onRemove: (t) => {
       c.tags = c.tags.filter((existing) => existing.id !== t.id);
+      touch(c);
       save();
       scheduleSync();
       renderThreadModal();
@@ -1240,6 +1340,7 @@ const renderThreadModal = () => {
     const idx = c.tags.findIndex((existing) => existing.id === t.id);
     if (idx === -1) c.tags.push(t);
     else c.tags.splice(idx, 1);
+    touch(c);
     save();
     scheduleSync();
     renderThreadModal();
@@ -1284,6 +1385,7 @@ wireCustomTagAdd(el.threadModalTagInput, el.threadModalTagAdd, (t) => {
   const c = findComment(openThreadId);
   if (!c) return;
   c.tags.push(t);
+  touch(c);
   save();
   scheduleSync();
   renderThreadModal();
@@ -1300,7 +1402,8 @@ el.threadModalReplyForm.addEventListener("submit", (e) => {
   const c = findComment(openThreadId);
   const body = el.threadModalReplyInput.value.trim();
   if (!c || !body || !session) return;
-  c.replies.push({ author: session.name, body });
+  c.replies.push({ id: crypto.randomUUID(), author: session.name, body, createdAt: new Date().toISOString() });
+  touch(c);
   el.threadModalReplyInput.value = "";
   save();
   scheduleSync();
@@ -1312,6 +1415,7 @@ el.threadModalResolve.addEventListener("click", () => {
   const c = findComment(openThreadId);
   if (!c) return;
   c.resolved = !c.resolved;
+  touch(c);
   save();
   scheduleSync();
   renderThreadModal();
@@ -1404,6 +1508,7 @@ const openWorkspace = () => {
   renderWorkspace();
   renderPrototypeSurface();
   updateSyncUI();
+  pullRemoteComments();
 
   if (!session) {
     el.gateMeta.textContent = `${state.review.title} / ${countdown(state.review.tzero)}`;
@@ -1605,6 +1710,7 @@ el.composer.addEventListener("submit", (e) => {
   const body = el.commentBody.value.trim();
   if (!body || !anchor || !session) return;
 
+  const now = new Date().toISOString();
   state.comments.push({
     id: crypto.randomUUID(),
     author: session.name,
@@ -1612,7 +1718,8 @@ el.composer.addEventListener("submit", (e) => {
     blocker: el.commentBlocker.checked,
     tags: composerTags.map((t) => ({ ...t })),
     resolved: false,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
     replies: [],
     ...anchor,
   });
@@ -1658,3 +1765,9 @@ if (state.created) {
 setInterval(() => {
   if (state.created) el.countdown.textContent = countdown(state.review.tzero);
 }, 1000);
+
+setInterval(pullRemoteComments, 20000);
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) pullRemoteComments();
+});
