@@ -365,12 +365,6 @@
       <form class="modal composer is-hidden" id="composer">
         <div class="modal-head">
           <span class="micro">New comment</span>
-          <span class="micro" id="anchor-label">—</span>
-        </div>
-        <textarea id="comment-body" rows="3"></textarea>
-
-        <div class="tag-row">
-          <div class="thread-tags" id="composer-tags"></div>
           <button type="button" class="tag-toggle-btn" id="composer-tag-toggle" aria-label="Tags">
             <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
               <path
@@ -384,12 +378,11 @@
             </svg>
           </button>
         </div>
+        <textarea id="comment-body" rows="3"></textarea>
+
+        <div class="thread-tags" id="composer-tags"></div>
 
         <div class="composer-foot">
-          <label class="check micro">
-            <input type="checkbox" id="comment-blocker" />
-            Blocker
-          </label>
           <div class="composer-btns">
             <button type="button" class="btn btn-quiet" id="composer-cancel">Cancel</button>
             <button type="submit" class="btn btn-solid">Post</button>
@@ -465,13 +458,20 @@
         </div>
       </div>
 
+      <!-- lives inside screen-workspace (rather than as a page-level
+           sibling) so it shares this screen's stacking context: that's
+           what lets menu-modal / composer-tag-modal / thread-tag-modal
+           paint above it even though screen-workspace itself is a
+           position:fixed stacking-context root. -->
+      <div class="click-catcher is-hidden" id="click-catcher-workspace"></div>
     </main>
 
-    <!-- catches the dismiss-click for the menu / tag popovers, so a
-         click landing inside the prototype iframe (a separate
-         document — clicks there never bubble to ours) still closes
-         whichever popover is open. Kept outside both screens so it
-         works regardless of which one is active. -->
+    <!-- catches the dismiss-click for onboarding-only popovers
+         (token-info-modal, existing-review-modal). Kept outside both
+         screens so it works regardless of which one is active; it must
+         stay separate from click-catcher-workspace above since a
+         catcher outside screen-workspace's stacking context can never
+         be outranked by a popover inside it. -->
     <div class="click-catcher is-hidden" id="click-catcher"></div>
 
     <!-- NAME GATE -->

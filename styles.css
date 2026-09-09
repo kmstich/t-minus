@@ -1002,7 +1002,9 @@ button.tag-chip {
   z-index: 7;
   width: 320px;
   max-width: calc(100vw - var(--sp-8));
-  background: var(--white);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--ink);
   box-shadow: 0 20px 48px rgba(var(--ink-rgb), 0.16);
   padding: var(--sp-5);
@@ -1015,7 +1017,6 @@ button.tag-chip {
   right: var(--sp-6);
 }
 
-.composer,
 .thread-modal,
 #existing-review-modal {
   top: 50%;
@@ -1025,6 +1026,12 @@ button.tag-chip {
 
 #existing-review-modal {
   width: 400px;
+}
+
+/* composer is positioned in JS so its top-right corner lands on the
+   canvas point that was clicked, not centered like the other modals */
+.composer {
+  left: auto;
 }
 
 .click-catcher {
@@ -1041,7 +1048,9 @@ button.tag-chip {
   top: 60px;
   right: var(--sp-4);
   width: 200px;
-  background: var(--white);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--line-2);
   border-radius: var(--radius-btn);
   box-shadow: 0 8px 24px rgba(var(--ink-rgb), 0.16);
@@ -1169,20 +1178,13 @@ button.tag-chip {
 .composer-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-top: var(--sp-3);
 }
 
 .composer-btns {
   display: flex;
   gap: var(--sp-2);
-}
-
-.check {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  cursor: pointer;
 }
 
 /* GATE */

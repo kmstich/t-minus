@@ -170,14 +170,13 @@ const el = {
   statVotes: $("#stat-votes"),
 
   composer: $("#composer"),
-  anchorLabel: $("#anchor-label"),
   commentBody: $("#comment-body"),
-  commentBlocker: $("#comment-blocker"),
   composerTags: $("#composer-tags"),
   composerTagToggle: $("#composer-tag-toggle"),
   composerCancel: $("#composer-cancel"),
 
   clickCatcher: $("#click-catcher"),
+  clickCatcherWorkspace: $("#click-catcher-workspace"),
 
   composerTagModal: $("#composer-tag-modal"),
   composerTagModalClose: $("#composer-tag-modal-close"),
@@ -346,6 +345,7 @@ const formatBrief = (items) => (items.length ? `Focus areas: ${items.join(", ")}
 /* ---------- comment tags ---------- */
 
 const TAG_LIBRARY = [
+  { id: "blocker", label: "Blocker", color: "#E30039" },
   { id: "a11y", label: "A11y", color: "#2F6FED" },
   { id: "ux", label: "UX", color: "#1FA463" },
   { id: "visual-design", label: "Visual design", color: "#8B5CF6" },
@@ -354,6 +354,8 @@ const TAG_LIBRARY = [
   { id: "content", label: "Content", color: "#2BB3B3" },
   { id: "bug", label: "Bug", color: "#E5484D" },
 ];
+
+const isBlocker = (c) => (c.tags || []).some((t) => t.id === "blocker");
 
 const makeCustomTag = (label) => ({
   id: `custom-${slugify(label)}-${Date.now().toString(36)}`,
@@ -1193,7 +1195,7 @@ el.btnBack.addEventListener("click", () => {
 
 const counts = () => ({
   open: state.comments.filter((c) => !c.resolved).length,
-  blockers: state.comments.filter((c) => !c.resolved && c.blocker).length,
+  blockers: state.comments.filter((c) => !c.resolved && isBlocker(c)).length,
   go: Object.values(state.votes).filter((v) => v === "go").length,
   nogo: Object.values(state.votes).filter((v) => v === "nogo").length,
 });
@@ -1231,7 +1233,7 @@ el.composerTagToggle.addEventListener("click", () => {
   if (opening) {
     el.composerTagModal.classList.remove("is-hidden");
     positionBelow(el.composer, el.composerTagModal);
-    showCatcher(closeComposerTagModal);
+    showCatcher(closeComposerTagModal, "workspace");
   } else {
     closeComposerTagModal();
   }
@@ -1263,8 +1265,6 @@ const closeComposer = () => {
   anchor = null;
   el.composer.classList.add("is-hidden");
   el.commentBody.value = "";
-  el.commentBlocker.checked = false;
-  el.anchorLabel.textContent = "—";
   composerTags = [];
   renderComposerTags();
   closeComposerTagModal();
@@ -1281,6 +1281,26 @@ const closeComposer = () => {
 
 const PIN_DRAG_THRESHOLD = 4;
 let pinDrag = null;
+
+// Two comments anchored at (near enough to) the same point render as
+// perfectly overlapping pins — only the topmost one is visible, so a
+// second comment from the same spot (very common: several notes about
+// one small element) silently looks like it never appeared. Nudge a
+// new pin's position away from anything already sitting on top of it.
+const PIN_COLLISION_EPS = 0.015;
+const PIN_COLLISION_STEP = 0.02;
+
+const dedupeAnchor = (x, y) => {
+  let ax = x;
+  let ay = y;
+  for (let i = 0; i < 25; i += 1) {
+    const collides = state.comments.some((c) => Math.abs(c.x - ax) < PIN_COLLISION_EPS && Math.abs(c.y - ay) < PIN_COLLISION_EPS);
+    if (!collides) break;
+    ax = Math.min(0.97, x + (i + 1) * PIN_COLLISION_STEP);
+    ay = Math.min(0.97, y + (i + 1) * PIN_COLLISION_STEP);
+  }
+  return { x: ax, y: ay };
+};
 
 const showPinPreview = (dot, comment) => {
   el.pinPreview.textContent = comment.body;
@@ -1356,7 +1376,7 @@ const renderPins = () => {
   visible().forEach((c) => {
     const dot = document.createElement("button");
     dot.type = "button";
-    dot.className = `pin-dot${c.blocker ? " is-blocker" : ""}`;
+    dot.className = `pin-dot${isBlocker(c) ? " is-blocker" : ""}`;
     dot.style.setProperty("--pin-color", authorColor(c.author));
     dot.style.left = `${c.x * 100}%`;
     dot.style.top = `${c.y * 100}%`;
@@ -1411,9 +1431,7 @@ const renderThreads = () => {
     node.querySelector(".thread-author").textContent = c.author;
     node.querySelector(".thread-meta").textContent = c.resolved
       ? `${relativeTime(c.createdAt)} · resolved`
-      : c.blocker
-        ? `${relativeTime(c.createdAt)} · blocker`
-        : relativeTime(c.createdAt);
+      : relativeTime(c.createdAt);
     node.querySelector(".thread-body").textContent = c.body;
     renderTagList(node.querySelector(".thread-tags"), c.tags);
 
@@ -1442,6 +1460,17 @@ const positionBelow = (anchorEl, targetEl) => {
   targetEl.style.left = `${rect.left}px`;
 };
 
+// the composer's top-right corner lands on the exact canvas point that
+// was clicked (call after el.composer is unhidden, so its size is real)
+const positionComposerAt = (clientX, clientY) => {
+  const width = el.composer.offsetWidth;
+  const height = el.composer.offsetHeight;
+  const right = Math.max(16, Math.min(window.innerWidth - clientX, window.innerWidth - width - 16));
+  const top = Math.max(16, Math.min(clientY, window.innerHeight - height - 16));
+  el.composer.style.right = `${right}px`;
+  el.composer.style.top = `${top}px`;
+};
+
 /* ---------- click-catcher ----------
  * A transparent full-page backdrop that closes whichever popover
  * (menu, tag picker) is open when clicked. A plain document click
@@ -1449,25 +1478,41 @@ const positionBelow = (anchorEl, targetEl) => {
  * prototype iframe happens in a separate document and never bubbles
  * up to ours, so the backdrop intercepts it before it reaches the
  * iframe at all.
+ *
+ * There are two catcher elements, not one: #screen-workspace is a
+ * position:fixed stacking-context root, so a catcher living outside
+ * it (needed for onboarding's own popovers) always paints above the
+ * entire workspace subtree, no matter what z-index a popover inside
+ * the workspace claims. #click-catcher-workspace lives inside
+ * screen-workspace instead, sharing its stacking context, so
+ * workspace popovers (menu, composer/thread tag modals) can outrank
+ * it. Only ever show the one matching the popover's screen.
  */
 
 let catcherDismiss = null;
+let activeCatcherEl = null;
 
-const showCatcher = (onDismiss) => {
+const showCatcher = (onDismiss, scope = "top") => {
   catcherDismiss = onDismiss;
-  el.clickCatcher.classList.remove("is-hidden");
+  activeCatcherEl = scope === "workspace" ? el.clickCatcherWorkspace : el.clickCatcher;
+  activeCatcherEl.classList.remove("is-hidden");
 };
 
 const hideCatcher = () => {
   el.clickCatcher.classList.add("is-hidden");
+  el.clickCatcherWorkspace.classList.add("is-hidden");
   catcherDismiss = null;
+  activeCatcherEl = null;
 };
 
-el.clickCatcher.addEventListener("click", () => {
+const onCatcherClick = () => {
   const dismiss = catcherDismiss;
   hideCatcher();
   dismiss?.();
-});
+};
+
+el.clickCatcher.addEventListener("click", onCatcherClick);
+el.clickCatcherWorkspace.addEventListener("click", onCatcherClick);
 
 /* ---------- thread modal — each comment opens as its own modal
    rather than expanding inline in the sidebar ---------- */
@@ -1506,9 +1551,7 @@ const renderThreadModal = () => {
   el.threadModalAuthor.textContent = c.author;
   el.threadModalMeta.textContent = c.resolved
     ? `${relativeTime(c.createdAt)} · resolved`
-    : c.blocker
-      ? `${relativeTime(c.createdAt)} · blocker`
-      : relativeTime(c.createdAt);
+    : relativeTime(c.createdAt);
   el.threadModalText.textContent = c.body;
 
   renderTagList(el.threadModalTags, c.tags, {
@@ -1559,7 +1602,7 @@ el.threadModalTagToggle.addEventListener("click", () => {
   if (opening) {
     el.threadTagModal.classList.remove("is-hidden");
     positionBelow(el.threadModal, el.threadTagModal);
-    showCatcher(closeThreadTagModal);
+    showCatcher(closeThreadTagModal, "workspace");
   } else {
     closeThreadTagModal();
   }
@@ -1743,7 +1786,7 @@ el.hamburgerBtn.addEventListener("click", (e) => {
   const opening = el.menuModal.classList.contains("is-hidden");
   if (opening) {
     el.menuModal.classList.remove("is-hidden");
-    showCatcher(closeMenu);
+    showCatcher(closeMenu, "workspace");
   } else {
     closeMenu();
   }
@@ -1884,10 +1927,10 @@ el.overlay.addEventListener("click", (e) => {
     y: (e.clientY - rect.top) / rect.height,
   };
 
-  el.anchorLabel.textContent = `${Math.round(anchor.x * 100)}, ${Math.round(anchor.y * 100)}`;
   composerTags = [];
   renderComposerTags();
   el.composer.classList.remove("is-hidden");
+  positionComposerAt(e.clientX, e.clientY);
   el.commentBody.focus();
 });
 
@@ -1901,13 +1944,12 @@ el.composer.addEventListener("submit", (e) => {
     id: crypto.randomUUID(),
     author: session.name,
     body,
-    blocker: el.commentBlocker.checked,
     tags: composerTags.map((t) => ({ ...t })),
     resolved: false,
     createdAt: now,
     updatedAt: now,
     replies: [],
-    ...anchor,
+    ...dedupeAnchor(anchor.x, anchor.y),
   });
 
   save();
