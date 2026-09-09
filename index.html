@@ -34,11 +34,11 @@
           <fieldset class="step is-active" data-step="1">
             <label class="field">
               <span class="micro">Name</span>
-              <input id="in-creator-name" type="text" placeholder="Kevin Stich" />
+              <input id="in-creator-name" type="text" />
             </label>
             <label class="field">
               <span class="micro">Email (optional)</span>
-              <input id="in-creator-email" type="email" placeholder="kevin.stich@target.com" />
+              <input id="in-creator-email" type="email" />
             </label>
           </fieldset>
 
@@ -46,18 +46,38 @@
           <fieldset class="step" data-step="2">
             <label class="field">
               <span class="micro">Github link</span>
-              <input id="in-repo" type="url" placeholder="https://github.com/team/checkout-prototype" />
+              <input id="in-repo" type="url" />
             </label>
             <label class="field">
-              <span class="micro">GitHub token (optional)</span>
-              <input id="in-token" type="password" placeholder="ghp_… or github_pat_…" autocomplete="off" />
+              <span class="micro-row">
+                <span class="micro">GitHub token (optional)</span>
+                <button type="button" class="info-toggle-btn" id="token-info-toggle" aria-label="How to get a token">
+                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+                    <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" />
+                    <path d="M8 7.2v4.2" stroke="currentColor" stroke-linecap="round" />
+                    <circle cx="8" cy="4.8" r="0.9" fill="currentColor" />
+                  </svg>
+                </button>
+              </span>
+              <input id="in-token" type="password" autocomplete="off" />
             </label>
-            <p class="hint">
-              Only needed if you want comments written back to this repo, as a dedicated
-              tminus-* branch — never to main, and never to any other repo. Without a token,
-              everything stays in this browser only. Stored only in this browser.
-            </p>
           </fieldset>
+
+          <!-- TOKEN INFO POPOVER (child modal, appears below the token field) -->
+          <div class="modal tag-modal is-hidden" id="token-info-modal">
+            <div class="modal-head">
+              <span class="micro">Getting a token</span>
+              <button type="button" class="link micro" id="token-info-close">Close</button>
+            </div>
+            <ol class="info-steps">
+              <li>Go to GitHub → Settings → Developer settings → Personal access tokens.</li>
+              <li>Generate a new token (fine-grained is fine) scoped to just this repository.</li>
+              <li>Grant it "Contents: Read and write" access.</li>
+              <li>Copy the token and paste it here. It's stored only in this browser and used
+                only to write a dedicated tminus-* branch on this repo — never main, never
+                any other repo.</li>
+            </ol>
+          </div>
 
           <!-- 3 -->
           <fieldset class="step" data-step="3">
@@ -81,7 +101,7 @@
           <fieldset class="step" data-step="4">
             <label class="field">
               <span class="micro">Name (required)</span>
-              <input id="in-title" type="text" placeholder="Checkout Redesign" maxlength="100" />
+              <input id="in-title" type="text" maxlength="100" />
             </label>
             <p class="hint" id="title-char-count">0/100 characters</p>
           </fieldset>
@@ -253,7 +273,7 @@
 
           <label class="field">
             <span class="micro">GitHub token (optional)</span>
-            <input id="edit-token" type="password" placeholder="ghp_… or github_pat_…" autocomplete="off" />
+            <input id="edit-token" type="password" autocomplete="off" />
           </label>
           <p class="hint">Leave blank to keep the current token. Stored only in this browser.</p>
 
@@ -294,7 +314,7 @@
           <span class="micro">New comment</span>
           <span class="micro" id="anchor-label">—</span>
         </div>
-        <textarea id="comment-body" rows="3" placeholder="What isn't working here?"></textarea>
+        <textarea id="comment-body" rows="3"></textarea>
 
         <div class="tag-row">
           <div class="thread-tags" id="composer-tags"></div>
@@ -357,7 +377,7 @@
 
         <div class="replies" id="thread-modal-replies"></div>
         <form class="reply-form is-hidden" id="thread-modal-reply-form">
-          <input type="text" id="thread-modal-reply-input" placeholder="Reply" />
+          <input type="text" id="thread-modal-reply-input" />
         </form>
 
         <div class="thread-acts">
@@ -374,7 +394,7 @@
         </div>
         <div class="tag-options" id="composer-tag-options"></div>
         <div class="tag-add-row">
-          <input type="text" id="composer-tag-input" placeholder="Custom tag" maxlength="24" />
+          <input type="text" id="composer-tag-input" maxlength="24" />
           <button type="button" class="link micro" id="composer-tag-add">Add</button>
         </div>
       </div>
@@ -387,24 +407,26 @@
         </div>
         <div class="tag-options" id="thread-modal-tag-options"></div>
         <div class="tag-add-row">
-          <input type="text" id="thread-modal-tag-input" placeholder="Custom tag" maxlength="24" />
+          <input type="text" id="thread-modal-tag-input" maxlength="24" />
           <button type="button" class="link micro" id="thread-modal-tag-add">Add</button>
         </div>
       </div>
 
-      <!-- catches the dismiss-click for the menu / tag popovers, so a
-           click landing inside the prototype iframe (a separate
-           document — clicks there never bubble to ours) still closes
-           whichever popover is open -->
-      <div class="click-catcher is-hidden" id="click-catcher"></div>
     </main>
+
+    <!-- catches the dismiss-click for the menu / tag popovers, so a
+         click landing inside the prototype iframe (a separate
+         document — clicks there never bubble to ours) still closes
+         whichever popover is open. Kept outside both screens so it
+         works regardless of which one is active. -->
+    <div class="click-catcher is-hidden" id="click-catcher"></div>
 
     <!-- NAME GATE -->
     <div class="gate is-hidden" id="gate">
       <form class="gate-card" id="gate-form">
         <p class="micro" id="gate-meta">—</p>
         <h2>What should we call you?</h2>
-        <input id="in-name" type="text" maxlength="32" placeholder="Kevin" />
+        <input id="in-name" type="text" maxlength="32" />
         <button type="submit" class="btn btn-solid">Start review</button>
         <p class="hint">No account. Stored in this browser only.</p>
       </form>

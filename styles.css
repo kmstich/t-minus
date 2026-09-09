@@ -856,6 +856,41 @@ button.tag-chip {
   color: var(--ink);
 }
 
+.micro-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.info-toggle-btn {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.info-toggle-btn:hover {
+  color: var(--ink);
+}
+
+.info-steps {
+  margin: 0;
+  padding-left: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
 /* child modal — tag picker, appears stacked directly below its
    parent comment modal (composer or thread-modal) */
 .tag-modal {

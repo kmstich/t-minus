@@ -98,6 +98,9 @@ const el = {
   inCreatorEmail: $("#in-creator-email"),
   inRepo: $("#in-repo"),
   inToken: $("#in-token"),
+  tokenInfoToggle: $("#token-info-toggle"),
+  tokenInfoModal: $("#token-info-modal"),
+  tokenInfoClose: $("#token-info-close"),
   resolveStatus: $("#resolve-status"),
   resolveRepoLabel: $("#resolve-repo-label"),
   resolveNote: $("#resolve-note"),
@@ -840,6 +843,7 @@ const renderStep = () => {
   el.stepLede.textContent = meta.lede;
   el.progress.style.width = `${(step / STEPS.length) * 100}%`;
   el.error.textContent = "";
+  closeTokenInfo();
 
   el.steps.forEach((node) => node.classList.toggle("is-active", Number(node.dataset.step) === step));
   el.btnBack.classList.toggle("is-hidden", step === 1);
@@ -952,6 +956,26 @@ el.composerTagToggle.addEventListener("click", () => {
 });
 
 el.composerTagModalClose.addEventListener("click", closeComposerTagModal);
+
+/* ---------- token info popover ---------- */
+
+const closeTokenInfo = () => {
+  el.tokenInfoModal.classList.add("is-hidden");
+  hideCatcher();
+};
+
+el.tokenInfoToggle.addEventListener("click", () => {
+  const opening = el.tokenInfoModal.classList.contains("is-hidden");
+  if (opening) {
+    positionBelow(el.tokenInfoToggle, el.tokenInfoModal);
+    el.tokenInfoModal.classList.remove("is-hidden");
+    showCatcher(closeTokenInfo);
+  } else {
+    closeTokenInfo();
+  }
+});
+
+el.tokenInfoClose.addEventListener("click", closeTokenInfo);
 
 const closeComposer = () => {
   anchor = null;
