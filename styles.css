@@ -1014,6 +1014,80 @@ button.tag-chip {
   padding: var(--sp-1) 0;
 }
 
+/* REACTIONS — a GitHub-style fixed emoji set, one chip per emoji with
+   any reactors plus a trailing "add" button that opens the picker */
+.reactions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: none;
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.reaction-chip.is-on {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: rgba(0, 107, 239, 0.08);
+}
+
+.reaction-add-btn {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.reaction-add-btn:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.reaction-picker {
+  width: auto;
+  padding: var(--sp-2);
+}
+
+.reaction-picker-options {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+.reaction-option {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 0;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.reaction-option:hover {
+  background: var(--paper);
+}
+
 .replies {
   display: flex;
   flex-direction: column;

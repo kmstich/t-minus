@@ -241,6 +241,9 @@ const el = {
   threadModalText: $("#thread-modal-text"),
   threadModalTags: $("#thread-modal-tags"),
   threadModalTagToggle: $("#thread-modal-tag-toggle"),
+  threadModalReactions: $("#thread-modal-reactions"),
+  reactionPickerModal: $("#reaction-picker-modal"),
+  reactionPickerOptions: $("#reaction-picker-options"),
   threadModalReplies: $("#thread-modal-replies"),
   threadModalReplyForm: $("#thread-modal-reply-form"),
   threadModalReplyAvatar: $("#thread-modal-reply-avatar"),
@@ -478,6 +481,78 @@ const wireCustomTagAdd = (input, button, onAdd) => {
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") submit(e);
   });
+};
+
+/* ---------- reactions ----------
+ * A fixed set of emoji, GitHub-issue-style, rather than a full emoji
+ * keyboard — comment.reactions is {emoji: [deviceId, ...]}, keyed by
+ * the same anonymous per-browser id the go/no-go vote uses, so a
+ * reactor can toggle their own reaction off without a name attached.
+ */
+
+const REACTION_EMOJIS = ["👍", "👎", "😄", "🎉", "😕", "❤️", "🚀", "👀"];
+
+const toggleReaction = (c, emoji) => {
+  c.reactions = c.reactions || {};
+  const reactors = c.reactions[emoji] || [];
+  const idx = reactors.indexOf(deviceId);
+  if (idx === -1) reactors.push(deviceId);
+  else reactors.splice(idx, 1);
+  if (reactors.length) c.reactions[emoji] = reactors;
+  else delete c.reactions[emoji];
+  touch(c);
+  save();
+  scheduleSync();
+};
+
+const closeReactionPicker = () => {
+  el.reactionPickerModal.classList.add("is-hidden");
+  hideCatcher();
+};
+
+const openReactionPicker = (anchorEl, c, onChange) => {
+  el.reactionPickerOptions.innerHTML = "";
+  REACTION_EMOJIS.forEach((emoji) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "reaction-option";
+    btn.textContent = emoji;
+    btn.addEventListener("click", () => {
+      toggleReaction(c, emoji);
+      closeReactionPicker();
+      onChange();
+    });
+    el.reactionPickerOptions.appendChild(btn);
+  });
+  el.reactionPickerModal.classList.remove("is-hidden");
+  positionBelow(anchorEl, el.reactionPickerModal);
+  showCatcher(closeReactionPicker, "workspace");
+};
+
+const renderReactions = (container, c) => {
+  c.reactions = c.reactions || {};
+  container.innerHTML = "";
+
+  Object.entries(c.reactions).forEach(([emoji, reactors]) => {
+    if (!reactors.length) return;
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `reaction-chip${reactors.includes(deviceId) ? " is-on" : ""}`;
+    chip.textContent = `${emoji} ${reactors.length}`;
+    chip.addEventListener("click", () => {
+      toggleReaction(c, emoji);
+      renderReactions(container, c);
+    });
+    container.appendChild(chip);
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "reaction-add-btn";
+  addBtn.setAttribute("aria-label", "Add reaction");
+  addBtn.innerHTML = ADD_FIELD_ICON;
+  addBtn.addEventListener("click", () => openReactionPicker(addBtn, c, () => renderReactions(container, c)));
+  container.appendChild(addBtn);
 };
 
 /* ---------- repository entry-file resolution ----------
@@ -1159,6 +1234,14 @@ const mergeComment = (local, remote) => {
     (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
   );
 
+  // same union approach as tags above: each emoji's reactor list is
+  // the combined set from both sides, deduped by device id
+  const reactions = {};
+  new Set([...Object.keys(remote.reactions || {}), ...Object.keys(local.reactions || {})]).forEach((emoji) => {
+    const ids = [...new Set([...(remote.reactions?.[emoji] || []), ...(local.reactions?.[emoji] || [])])];
+    if (ids.length) reactions[emoji] = ids;
+  });
+
   const newer =
     new Date(local.updatedAt || local.createdAt) >= new Date(remote.updatedAt || remote.createdAt) ? local : remote;
 
@@ -1167,6 +1250,7 @@ const mergeComment = (local, remote) => {
     ...local,
     resolved: newer.resolved,
     tags: [...tagMap.values()],
+    reactions,
     replies,
     updatedAt: newer.updatedAt || newer.createdAt,
   };
@@ -1461,7 +1545,10 @@ const renderStep = () => {
   el.stepIndex.textContent = `Step ${step} / ${STEPS.length}`;
   el.stepTitle.textContent = meta.title;
   el.stepLede.textContent = meta.lede;
-  el.progress.style.width = `${(step / STEPS.length) * 100}%`;
+  // a floor, not just step/total — at step 1 that's a ~14% sliver,
+  // thin enough to read as "hasn't started" next to the empty track
+  // behind it, when step 1 is already underway, not step 0
+  el.progress.style.width = `${Math.max(20, (step / STEPS.length) * 100)}%`;
   el.error.textContent = "";
   closeTokenInfo();
   closeExistingReviewModal();
@@ -1942,6 +2029,8 @@ const renderThreadModal = () => {
     : relativeTime(c.createdAt);
   el.threadModalText.textContent = c.body;
 
+  renderReactions(el.threadModalReactions, c);
+
   renderTagList(el.threadModalTags, c.tags, {
     removable: true,
     onRemove: (t) => {
@@ -2397,6 +2486,7 @@ el.composer.addEventListener("submit", (e) => {
     author: state.creator.name,
     body,
     tags: composerTags.map((t) => ({ ...t })),
+    reactions: {},
     resolved: false,
     createdAt: now,
     updatedAt: now,

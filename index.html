@@ -454,6 +454,8 @@
         </div>
         <p class="thread-body" id="thread-modal-text"></p>
 
+        <div class="reactions-row" id="thread-modal-reactions"></div>
+
         <div class="thread-tags" id="thread-modal-tags"></div>
 
         <div class="replies" id="thread-modal-replies"></div>
@@ -512,6 +514,11 @@
           <input type="text" id="thread-modal-tag-input" maxlength="24" />
           <button type="button" class="link micro" id="thread-modal-tag-add">Add</button>
         </div>
+      </div>
+
+      <!-- REACTION PICKER (child modal, appears below the reactions row's + button) -->
+      <div class="modal reaction-picker is-hidden" id="reaction-picker-modal">
+        <div class="reaction-picker-options" id="reaction-picker-options"></div>
       </div>
 
       <!-- lives inside screen-workspace (rather than as a page-level
