@@ -50,8 +50,8 @@
             </label>
             <label class="field">
               <span class="micro-row">
-                <span class="micro">GitHub token</span>
-                <button type="button" class="info-toggle-btn" id="token-info-toggle" aria-label="How to get a token">
+                <span class="micro">GitHub token (required)</span>
+                <button type="button" class="info-toggle-btn" id="token-info-toggle" aria-label="Why this is required and how to get one">
                   <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
                     <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" />
                     <path d="M8 7.2v4.2" stroke="currentColor" stroke-linecap="round" />
@@ -61,10 +61,6 @@
               </span>
               <input id="in-token" type="password" autocomplete="off" />
             </label>
-            <p class="hint">
-              Required — without it, your comments only exist in your own browser and
-              nobody else on the review will ever see them.
-            </p>
           </fieldset>
 
           <!-- TOKEN INFO POPOVER (child modal, appears below the token field) -->
@@ -74,6 +70,8 @@
               <button type="button" class="link micro" id="token-info-close">Close</button>
             </div>
             <ol class="info-steps">
+              <li>Without it, your comments only exist in your own browser — nobody else on
+                the review will ever see them.</li>
               <li>Go to GitHub → Settings → Developer settings → Personal access tokens.</li>
               <li>Generate a new token (fine-grained is fine) scoped to just this repository.</li>
               <li>Grant it "Contents: Read and write" access.</li>
