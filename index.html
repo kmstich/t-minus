@@ -52,11 +52,7 @@
               <span class="micro-row">
                 <span class="micro">GitHub token (required)</span>
                 <button type="button" class="info-toggle-btn" id="token-info-toggle" aria-label="Why this is required and how to get one">
-                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 16v-4" />
-                    <path d="M12 8h.01" />
-                  </svg>
+                  ℹ
                 </button>
               </span>
               <input id="in-token" type="password" autocomplete="off" />
@@ -68,10 +64,7 @@
             <div class="modal-head">
               <span class="micro">Getting a token</span>
               <button type="button" class="icon-close-btn" id="token-info-close" aria-label="Close">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
+                ✕
               </button>
             </div>
             <ol class="info-steps">
@@ -124,10 +117,7 @@
             <div class="modal-head">
               <span class="micro">Existing review found</span>
               <button type="button" class="icon-close-btn" id="existing-review-close" aria-label="Close">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
+                ✕
               </button>
             </div>
             <p class="hint">
@@ -185,11 +175,7 @@
               <div class="checklist" id="brief-checklist"></div>
             </label>
             <button type="button" class="link action-link add-field-link" id="add-brief-field">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M8 12h8" />
-                <path d="M12 8v8" />
-              </svg>
+              +
               Add focus area
             </button>
           </fieldset>
@@ -252,19 +238,11 @@
         <!-- MODE TOOLBAR -->
         <div class="segmented mode-toolbar" id="mode-toolbar" role="group" aria-label="Review mode">
           <button type="button" class="segmented-btn is-on" id="mode-interact" aria-label="Inspect">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path
-                d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"
-              />
-            </svg>
+            ↖
             <span>Inspect</span>
           </button>
           <button type="button" class="segmented-btn" id="mode-comment" aria-label="Comment">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path
-                d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"
-              />
-            </svg>
+            💬
             <span>Comment</span>
           </button>
         </div>
@@ -275,11 +253,7 @@
         <div class="sidebar-head">
           <h2 id="review-title">Review</h2>
           <button type="button" class="icon-btn" id="hamburger-btn" aria-label="Menu">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M4 5h16" />
-              <path d="M4 12h16" />
-              <path d="M4 19h16" />
-            </svg>
+            ☰
           </button>
         </div>
 
@@ -313,10 +287,7 @@
         <div class="modal-head">
           <p class="micro">Review details</p>
           <button type="button" class="icon-close-btn" id="close-details" aria-label="Close">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
+            ✕
           </button>
         </div>
 
@@ -379,10 +350,7 @@
         <div class="modal-head">
           <span class="micro">New comment</span>
           <button type="button" class="icon-close-btn" id="composer-close" aria-label="Close">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
+            ✕
           </button>
         </div>
 
@@ -392,18 +360,10 @@
           <span class="avatar" id="composer-avatar"></span>
           <textarea id="comment-body" rows="1" placeholder="Add a comment"></textarea>
           <button type="submit" class="send-btn" id="composer-send" aria-label="Post comment" disabled>
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="m5 12 7-7 7 7" />
-              <path d="M12 19V5" />
-            </svg>
+            ↑
           </button>
           <button type="button" class="tag-toggle-btn" id="composer-tag-toggle" aria-label="Tags">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path
-                d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
-              />
-              <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
-            </svg>
+            🏷️
           </button>
         </div>
       </form>
@@ -414,23 +374,13 @@
           <span class="micro">Comment</span>
           <div class="modal-head-actions">
             <button type="button" class="icon-close-btn" id="thread-modal-more-toggle" aria-label="More actions">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="1" />
-                <circle cx="19" cy="12" r="1" />
-                <circle cx="5" cy="12" r="1" />
-              </svg>
+              ⋯
             </button>
             <button type="button" class="icon-close-btn" id="thread-modal-resolve" aria-label="Resolve">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <path d="m16 9-5.5 5.5L8 12" />
-              </svg>
+              ✓
             </button>
             <button type="button" class="icon-close-btn" id="close-thread-modal" aria-label="Close">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
+              ✕
             </button>
           </div>
         </div>
@@ -459,18 +409,10 @@
           <span class="avatar" id="thread-modal-reply-avatar"></span>
           <input type="text" id="thread-modal-reply-input" placeholder="Reply" autocomplete="off" />
           <button type="submit" class="send-btn" id="thread-modal-reply-send" aria-label="Send reply" disabled>
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="m5 12 7-7 7 7" />
-              <path d="M12 19V5" />
-            </svg>
+            ↑
           </button>
           <button type="button" class="tag-toggle-btn" id="thread-modal-tag-toggle" aria-label="Tags">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path
-                d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
-              />
-              <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
-            </svg>
+            🏷️
           </button>
         </form>
       </div>
@@ -480,10 +422,7 @@
         <div class="modal-head">
           <span class="micro">Tags</span>
           <button type="button" class="icon-close-btn" id="composer-tag-modal-close" aria-label="Close">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
+            ✕
           </button>
         </div>
         <div class="tag-options" id="composer-tag-options"></div>
@@ -498,10 +437,7 @@
         <div class="modal-head">
           <span class="micro">Tags</span>
           <button type="button" class="icon-close-btn" id="thread-tag-modal-close" aria-label="Close">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
+            ✕
           </button>
         </div>
         <div class="tag-options" id="thread-modal-tag-options"></div>
@@ -541,10 +477,7 @@
       <div class="modal-head">
         <span class="micro">Choose file</span>
         <button type="button" class="icon-close-btn" id="file-picker-close" aria-label="Close">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
-          </svg>
+          ✕
         </button>
       </div>
       <div class="file-picker-list" id="file-picker-list"></div>

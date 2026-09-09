@@ -97,10 +97,20 @@ textarea {
   display: none !important;
 }
 
-.icon {
-  width: 16px;
-  height: 16px;
-  flex: none;
+/* icon-bearing buttons/spans are plain system symbols/emoji now, not
+   SVGs — sized here (rather than by a shared .icon class, since
+   there's no longer an element to hang one on) at roughly the same
+   16px the old SVGs rendered at */
+.info-toggle-btn,
+.icon-btn,
+.icon-close-btn,
+.tag-toggle-btn,
+.send-btn,
+.reaction-add-btn,
+.file-picker-icon,
+.sync-status-icon {
+  font-size: 16px;
+  line-height: 1;
 }
 
 /* MASTHEAD (onboarding only) */
@@ -521,10 +531,10 @@ textarea::placeholder {
    alongside the normal pointer, so "adding a comment" reads
    differently from just browsing */
 .canvas.is-comment {
-  /* Lucide's message-square path, same white-fill/black-stroke
-     treatment as before so it stays visible over any prototype
-     background; hotspot lands near the tail's point */
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24'%3E%3Cpath d='M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z' fill='white' stroke='black' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E")
+  /* the same 💬 emoji used on the Comment mode button, rendered as
+     SVG text so it can be a cursor image at all (a raw emoji
+     character isn't valid there) */
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Ctext x='2' y='21' font-size='22'%3E%F0%9F%92%AC%3C/text%3E%3C/svg%3E")
     2 23, pointer;
 }
 
@@ -723,14 +733,10 @@ body.is-dragging-pin * {
 
 .sync-status-icon {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 16px;
-  height: 16px;
   flex: none;
-}
-
-.sync-status-icon .icon {
-  width: 16px;
-  height: 16px;
 }
 
 .sync-status-icon.is-spinning {
@@ -1217,6 +1223,8 @@ button.tag-chip {
   width: 16px;
   height: 16px;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--ink-2);
 }
 

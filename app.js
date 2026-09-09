@@ -317,16 +317,10 @@ const authorColor = (name) => {
 const BRIEF_FIELDS_MIN = 1;
 const BRIEF_FIELDS_MAX = 20;
 
-// every icon in the app (this file and index.html alike) is a Lucide
-// icon (isc license, lucide.dev) — its <path>/<circle> body pasted in
-// as-is on Lucide's own 24x24 grid, just wrapped with this app's
-// sizing/color conventions instead of Lucide's own wrapper attributes
-const svgIcon = (inner) =>
-  `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
-
-const TRASH_ICON = svgIcon(
-  '<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
-);
+// icons throughout the app (this file and index.html alike) are
+// plain system symbols/emoji rather than custom vector art — sized
+// via .icon's font-size, colored via currentColor same as before
+const TRASH_ICON = "🗑️";
 
 const briefFieldRow = (value) => {
   const row = document.createElement("div");
@@ -347,7 +341,7 @@ const briefFieldRow = (value) => {
   return row;
 };
 
-const ADD_FIELD_ICON = svgIcon('<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/>');
+const ADD_FIELD_ICON = "+";
 
 const updateAddButtonState = (container, addButton) => {
   const count = container.children.length;
@@ -355,7 +349,7 @@ const updateAddButtonState = (container, addButton) => {
   addButton.disabled = atMax;
 
   if (addButton.id === "add-brief-field") {
-    addButton.innerHTML = atMax ? `Maximum ${BRIEF_FIELDS_MAX} reached` : `${ADD_FIELD_ICON}Add focus area`;
+    addButton.innerHTML = atMax ? `Maximum ${BRIEF_FIELDS_MAX} reached` : `${ADD_FIELD_ICON} Add focus area`;
   } else {
     addButton.textContent = atMax ? `Maximum ${BRIEF_FIELDS_MAX} reached` : "+ Add another";
   }
@@ -769,19 +763,10 @@ const resolveEntryFromRepo = async (repoInput, token = "") => {
  * renaming files to match a convention.
  */
 
-const ICON_FOLDER = svgIcon(
-  '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
-);
-// file-code — the angle-bracket glyph reads as "markup", distinct from tsx/jsx's braces below
-const ICON_FILE_HTML = svgIcon(
-  '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/>',
-);
-const ICON_FILE_CODE = svgIcon(
-  '<path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/>',
-);
-const ICON_FILE_PLAIN = svgIcon(
-  '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/>',
-);
+const ICON_FOLDER = "📁";
+const ICON_FILE_HTML = "🌐";
+const ICON_FILE_CODE = "💻";
+const ICON_FILE_PLAIN = "📄";
 
 const iconForFile = (name) => {
   if (/\.html?$/i.test(name)) return ICON_FILE_HTML;
@@ -1081,10 +1066,10 @@ let syncTimer = null;
 let syncStatus = "idle"; // idle | pending | syncing | synced | error | nocreds
 let syncMessage = "";
 
-const SYNC_ICON_CHECK = svgIcon('<circle cx="12" cy="12" r="10"/><path d="m16 9-5.5 5.5L8 12"/>');
-const SYNC_ICON_ALERT = svgIcon('<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>');
-const SYNC_ICON_SPIN = svgIcon('<path d="M21 12a9 9 0 1 1-6.219-8.56"/>');
-const SYNC_ICON_IDLE = svgIcon('<circle cx="12" cy="12" r="10"/>');
+const SYNC_ICON_CHECK = "✓";
+const SYNC_ICON_ALERT = "⚠";
+const SYNC_ICON_SPIN = "↻";
+const SYNC_ICON_IDLE = "○";
 
 // full detail (the file path, the exact error) used to live in this
 // text and read as noise for something that's supposed to be a quiet
@@ -1489,8 +1474,7 @@ const stepValue = () =>
     7: "ok",
   })[step];
 
-const CHECK_ICON =
-  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5 8.2l2 2 4-4.4" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CHECK_ICON = "✓";
 
 const specRow = (label, value, { isLink = false, onEdit } = {}) => {
   const row = document.createElement("div");
