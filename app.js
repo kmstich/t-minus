@@ -263,9 +263,9 @@ const authorColor = (name) => {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 };
 
-/* ---------- feedback focus checklist (user-authored, 5–20 fields) ---------- */
+/* ---------- feedback focus checklist (user-authored, 1–20 fields) ---------- */
 
-const BRIEF_FIELDS_MIN = 5;
+const BRIEF_FIELDS_MIN = 1;
 const BRIEF_FIELDS_MAX = 20;
 
 const TRASH_ICON =
@@ -316,6 +316,7 @@ const initBriefFields = (container, addButton, values) => {
 
   container.querySelectorAll(".remove-field").forEach((btn) => {
     btn.addEventListener("click", () => {
+      if (container.children.length <= 1) return;
       btn.closest(".checklist-item").remove();
       updateAddButtonState(container, addButton);
     });
@@ -325,6 +326,7 @@ const initBriefFields = (container, addButton, values) => {
     if (container.children.length >= BRIEF_FIELDS_MAX) return;
     const row = briefFieldRow("");
     row.querySelector(".remove-field").addEventListener("click", () => {
+      if (container.children.length <= 1) return;
       row.remove();
       updateAddButtonState(container, addButton);
     });
@@ -1931,7 +1933,7 @@ el.gateForm.addEventListener("submit", (e) => {
 el.inCreatorName.value = state.creator.name;
 el.inCreatorEmail.value = state.creator.email;
 el.inRepo.value = state.review.repo;
-if (githubToken) el.inToken.placeholder = "Token already saved — leave blank to keep it";
+if (githubToken) el.inToken.value = githubToken;
 el.inTitle.value = state.review.title;
 el.inTzero.value = toDateInput(state.review.tzero);
 initBriefFields(el.briefChecklist, el.addBriefField, state.review.briefAreas);
