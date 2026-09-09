@@ -140,7 +140,6 @@ const el = {
 
   filePickerModal: $("#file-picker-modal"),
   filePickerClose: $("#file-picker-close"),
-  filePickerSearch: $("#file-picker-search"),
   filePickerList: $("#file-picker-list"),
   inTitle: $("#in-title"),
   titleCharCount: $("#title-char-count"),
@@ -648,7 +647,59 @@ const resolveEntryFromRepo = async (repoInput, token = "") => {
  * renaming files to match a convention.
  */
 
-const listRepoFiles = async (owner, repo, token) => {
+const ICON_FOLDER =
+  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5h4l1 1.5h8v6.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg>';
+const ICON_FILE_HTML =
+  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M6 8L4.5 9.5 6 11M10 8l1.5 1.5L10 11" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+const ICON_FILE_CODE =
+  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M6.5 7.5c-1 0-1.2.8-1.2 1.5s.2 1.5 1.2 1.5M9.5 7.5c1 0 1.2.8 1.2 1.5s-.2 1.5-1.2 1.5" stroke="currentColor" stroke-linecap="round" fill="none"/></svg>';
+const ICON_FILE_PLAIN =
+  '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg>';
+
+const iconForFile = (name) => {
+  if (/\.html?$/i.test(name)) return ICON_FILE_HTML;
+  if (/\.(tsx|jsx|ts|js|mjs|cjs)$/i.test(name)) return ICON_FILE_CODE;
+  return ICON_FILE_PLAIN;
+};
+
+// the git trees API returns every blob/tree in the branch as one flat
+// list of full paths (e.g. "prototype/build/main.html") — this turns
+// that into an actual nested structure so the picker can be browsed
+// folder by folder instead of dumped out as one long flat list
+const buildFileTree = (entries) => {
+  const root = { name: "", path: "", type: "dir", children: [] };
+  const dirs = new Map([["", root]]);
+
+  const ensureDir = (path) => {
+    if (dirs.has(path)) return dirs.get(path);
+    const cut = path.lastIndexOf("/");
+    const parent = ensureDir(cut === -1 ? "" : path.slice(0, cut));
+    const node = { name: path.slice(cut + 1), path, type: "dir", children: [] };
+    parent.children.push(node);
+    dirs.set(path, node);
+    return node;
+  };
+
+  entries.forEach((e) => {
+    if (e.type === "tree") {
+      ensureDir(e.path);
+    } else if (e.type === "blob") {
+      const cut = e.path.lastIndexOf("/");
+      const parent = ensureDir(cut === -1 ? "" : e.path.slice(0, cut));
+      parent.children.push({ name: e.path.slice(cut + 1), path: e.path, type: "file" });
+    }
+  });
+
+  const sortNode = (node) => {
+    node.children.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "dir" ? -1 : 1));
+    node.children.filter((c) => c.type === "dir").forEach(sortNode);
+  };
+  sortNode(root);
+
+  return root;
+};
+
+const listRepoTree = async (owner, repo, token) => {
   const authHeaders = token ? { Authorization: `token ${token}` } : {};
   const repoRes = await fetchWithRetry(`https://api.github.com/repos/${owner}/${repo}`, {
     headers: { Accept: "application/vnd.github+json", ...authHeaders },
@@ -662,7 +713,7 @@ const listRepoFiles = async (owner, repo, token) => {
   );
   if (!treeRes.ok) throw new Error(describeGithubError(treeRes.status, !!token));
   const tree = await treeRes.json();
-  return (tree.tree || []).filter((e) => e.type === "blob").map((e) => e.path);
+  return buildFileTree(tree.tree || []);
 };
 
 // same {kind, path, html|source}/{error} shape as resolveEntryFromRepo,
@@ -682,34 +733,59 @@ const resolveManualFile = async (owner, repo, path, token) => {
   return fetchResolvedFile({ kind, path, downloadUrl: info.download_url }, token);
 };
 
-let filePickerFiles = [];
 let filePickerOnPick = null;
+let filePickerRoot = null;
+// the path of dir nodes from the tree root down to the folder
+// currently being viewed — empty means "at the root"
+let filePickerCwd = [];
 
 const closeFilePicker = () => {
   el.filePickerModal.classList.add("is-hidden");
   hideCatcher();
 };
 
-const renderFilePickerList = (query) => {
-  const q = query.trim().toLowerCase();
-  const matches = (q ? filePickerFiles.filter((f) => f.toLowerCase().includes(q)) : filePickerFiles).slice(0, 200);
-
+const renderFilePickerList = () => {
+  const node = filePickerCwd[filePickerCwd.length - 1] || filePickerRoot;
   el.filePickerList.innerHTML = "";
-  if (!matches.length) {
+
+  const addRow = (icon, label, onClick) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "file-picker-row";
+    const iconSpan = document.createElement("span");
+    iconSpan.className = "file-picker-icon";
+    iconSpan.innerHTML = icon;
+    const labelSpan = document.createElement("span");
+    labelSpan.textContent = label;
+    row.append(iconSpan, labelSpan);
+    row.addEventListener("click", onClick);
+    el.filePickerList.appendChild(row);
+  };
+
+  if (filePickerCwd.length) {
+    addRow(ICON_FOLDER, "..", () => {
+      filePickerCwd.pop();
+      renderFilePickerList();
+    });
+  }
+
+  if (!node.children.length) {
     const empty = document.createElement("p");
     empty.className = "micro";
-    empty.textContent = filePickerFiles.length ? "No files match." : "No files found in this repository.";
+    empty.textContent = "Empty folder.";
     el.filePickerList.appendChild(empty);
     return;
   }
 
-  matches.forEach((path) => {
-    const row = document.createElement("button");
-    row.type = "button";
-    row.className = "file-picker-row";
-    row.textContent = path;
-    row.addEventListener("click", () => filePickerOnPick?.(path));
-    el.filePickerList.appendChild(row);
+  node.children.forEach((child) => {
+    if (child.type === "dir") {
+      addRow(ICON_FOLDER, child.name, () => {
+        filePickerCwd.push(child);
+        renderFilePickerList();
+      });
+    } else {
+      addRow(iconForFile(child.name), child.name, () => filePickerOnPick?.(child.path));
+    }
   });
 };
 
@@ -721,8 +797,7 @@ const openFilePicker = async (repoValue, onPick) => {
   if (!parsed) return;
 
   filePickerOnPick = onPick;
-  el.filePickerSearch.value = "";
-  filePickerFiles = [];
+  filePickerCwd = [];
   el.filePickerList.innerHTML = "";
   const loading = document.createElement("p");
   loading.className = "micro";
@@ -731,11 +806,10 @@ const openFilePicker = async (repoValue, onPick) => {
 
   el.filePickerModal.classList.remove("is-hidden");
   showCatcher(closeFilePicker);
-  el.filePickerSearch.focus();
 
   try {
-    filePickerFiles = await listRepoFiles(parsed.owner, parsed.repo, githubToken);
-    renderFilePickerList("");
+    filePickerRoot = await listRepoTree(parsed.owner, parsed.repo, githubToken);
+    renderFilePickerList();
   } catch (err) {
     el.filePickerList.innerHTML = "";
     const errNode = document.createElement("p");
@@ -746,7 +820,6 @@ const openFilePicker = async (repoValue, onPick) => {
 };
 
 el.filePickerClose.addEventListener("click", closeFilePicker);
-el.filePickerSearch.addEventListener("input", () => renderFilePickerList(el.filePickerSearch.value));
 
 /* ---------- discovering an existing review on this repo ----------
  * A teammate pasting the same repo URL has no way to know someone

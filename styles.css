@@ -1039,9 +1039,27 @@ button.tag-chip {
   z-index: 9;
 }
 
-#file-picker-search {
-  width: 100%;
-  margin-bottom: var(--sp-3);
+#file-picker-modal .modal-head {
+  border-bottom: 1px solid var(--line-2);
+  padding-bottom: var(--sp-3);
+}
+
+.icon-close-btn {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.icon-close-btn:hover {
+  color: var(--ink);
 }
 
 .file-picker-list {
@@ -1052,7 +1070,9 @@ button.tag-chip {
 }
 
 .file-picker-row {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
   width: 100%;
   text-align: left;
   padding: var(--sp-2) 0;
@@ -1073,6 +1093,18 @@ button.tag-chip {
 }
 
 .file-picker-row:hover {
+  color: var(--blue);
+}
+
+.file-picker-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  color: var(--ink-2);
+}
+
+.file-picker-row:hover .file-picker-icon {
   color: var(--blue);
 }
 

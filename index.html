@@ -487,10 +487,13 @@
          both screens outright, rather than living inside either one. -->
     <div class="modal is-hidden" id="file-picker-modal">
       <div class="modal-head">
-        <span class="micro">Choose the build file</span>
-        <button type="button" class="link micro" id="file-picker-close">Close</button>
+        <span class="micro">Choose file</span>
+        <button type="button" class="icon-close-btn" id="file-picker-close" aria-label="Close">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-linecap="round" />
+          </svg>
+        </button>
       </div>
-      <input type="text" id="file-picker-search" placeholder="Filter files…" autocomplete="off" />
       <div class="file-picker-list" id="file-picker-list"></div>
     </div>
 
