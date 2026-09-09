@@ -898,6 +898,44 @@ button.tag-chip {
   color: var(--ink-2);
 }
 
+#existing-review-list {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--sp-4);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.existing-review-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.existing-review-row:last-child {
+  border-bottom: 0;
+}
+
+.existing-review-title {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.existing-review-meta {
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+  margin-top: var(--sp-1);
+}
+
+.existing-review-row .btn {
+  flex: none;
+  padding: var(--sp-2) var(--sp-4);
+}
+
 /* child modal — tag picker, appears stacked directly below its
    parent comment modal (composer or thread-modal) */
 .tag-modal {
@@ -969,10 +1007,15 @@ button.tag-chip {
 }
 
 .composer,
-.thread-modal {
+.thread-modal,
+#existing-review-modal {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+#existing-review-modal {
+  width: 400px;
 }
 
 .click-catcher {

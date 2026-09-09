@@ -101,6 +101,11 @@ const el = {
   tokenInfoToggle: $("#token-info-toggle"),
   tokenInfoModal: $("#token-info-modal"),
   tokenInfoClose: $("#token-info-close"),
+
+  existingReviewModal: $("#existing-review-modal"),
+  existingReviewClose: $("#existing-review-close"),
+  existingReviewList: $("#existing-review-list"),
+  existingReviewStartNew: $("#existing-review-start-new"),
   resolveStatus: $("#resolve-status"),
   resolveRepoLabel: $("#resolve-repo-label"),
   resolveNote: $("#resolve-note"),
@@ -521,6 +526,50 @@ const resolveEntryFromRepo = async (repoInput) => {
   return { kind: "source", path: entry.path, source: text };
 };
 
+/* ---------- discovering an existing review on this repo ----------
+ * A teammate pasting the same repo URL has no way to know someone
+ * already started a review on it — there's no shared link involved,
+ * just the bare repo. So when a repo URL is entered, look for
+ * tminus-* branches (that's where a review's synced snapshot lives)
+ * and, if any exist, offer to join one instead of silently creating a
+ * duplicate review nobody else will ever see. Anonymous/unauthenticated
+ * — works for public repos, same as entry-file resolution above.
+ */
+
+const listBranches = async (owner, repo) => {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches?per_page=100`, {
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+};
+
+const fetchReviewSnapshotFromBranch = async (owner, repo, branch) => {
+  const slug = branch.replace(/^tminus-/, "");
+  const path = `.tminus/${slug}/comments.json`;
+  try {
+    const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return { slug, branch, ...json };
+  } catch {
+    return null;
+  }
+};
+
+const scanForExistingReviews = async (repoInput) => {
+  const parsed = parseGithubRepo(repoInput);
+  if (!parsed) return [];
+  const branches = await listBranches(parsed.owner, parsed.repo);
+  const matches = branches.filter((b) => b.name.startsWith("tminus-")).slice(0, 10);
+  const snapshots = await Promise.all(matches.map((b) => fetchReviewSnapshotFromBranch(parsed.owner, parsed.repo, b.name)));
+  return snapshots.filter(Boolean);
+};
+
 /* ---------- writing comments back to the repo ----------
  * Optional and opt-in, configured only from the workspace's Details
  * panel (not the wizard). Without a token, everything stays in this
@@ -664,7 +713,22 @@ const runSync = async () => {
     const path = `.tminus/${slug}/comments.json`;
 
     const payload = JSON.stringify(
-      { review: state.review.title, updatedAt: new Date().toISOString(), comments: state.comments, votes: state.votes },
+      {
+        review: state.review.title,
+        updatedAt: new Date().toISOString(),
+        // enough of the review config for a teammate who finds this
+        // branch to join it, without carrying the large resolved
+        // HTML/source blobs — those get re-resolved live on join
+        reviewConfig: {
+          title: state.review.title,
+          tzero: state.review.tzero,
+          brief: state.review.brief,
+          briefAreas: state.review.briefAreas,
+          url: state.review.url,
+        },
+        comments: state.comments,
+        votes: state.votes,
+      },
       null,
       2,
     );
@@ -787,12 +851,103 @@ const pullRemoteComments = async () => {
   if (openThreadId) renderThreadModal();
 };
 
-/* ---------- wizard: step 2, repo access (single-button, no visible
-   status text or token field — token is configured later from the
-   workspace Details panel only) ---------- */
+/* ---------- wizard: step 2, repo access ---------- */
 
 el.inRepo.addEventListener("input", () => {
   state.review.repoConnected = false;
+});
+
+/* ---------- existing-review modal ---------- */
+
+let lastScannedRepo = "";
+
+const closeExistingReviewModal = () => {
+  el.existingReviewModal.classList.add("is-hidden");
+  hideCatcher();
+};
+
+const renderExistingReviewList = (found) => {
+  el.existingReviewList.innerHTML = "";
+  found.forEach((snap) => {
+    const row = document.createElement("div");
+    row.className = "existing-review-row";
+
+    const info = document.createElement("div");
+    const title = document.createElement("p");
+    title.className = "existing-review-title";
+    title.textContent = snap.reviewConfig?.title || snap.review || "Untitled review";
+    const meta = document.createElement("p");
+    meta.className = "existing-review-meta";
+    const count = (snap.comments || []).length;
+    meta.textContent = `${count} comment${count === 1 ? "" : "s"} · updated ${relativeTime(snap.updatedAt)}`;
+    info.append(title, meta);
+
+    const joinBtn = document.createElement("button");
+    joinBtn.type = "button";
+    joinBtn.className = "btn btn-solid";
+    joinBtn.textContent = "Join";
+    joinBtn.addEventListener("click", () => joinExistingReview(snap));
+
+    row.append(info, joinBtn);
+    el.existingReviewList.appendChild(row);
+  });
+};
+
+const openExistingReviewModal = (found) => {
+  renderExistingReviewList(found);
+  el.existingReviewModal.classList.remove("is-hidden");
+  showCatcher(closeExistingReviewModal);
+};
+
+const joinExistingReview = async (snap) => {
+  const repo = el.inRepo.value.trim();
+  const cfg = snap.reviewConfig || {};
+
+  state.review.repo = repo;
+  state.review.repoConnected = true;
+  state.review.slug = snap.slug;
+  state.review.title = cfg.title || snap.review || "Review";
+  state.review.tzero = cfg.tzero || defaultTZero();
+  state.review.brief = cfg.brief || "";
+  state.review.briefAreas = cfg.briefAreas || [];
+  state.review.url = cfg.url || "";
+  state.comments = snap.comments || [];
+  state.votes = snap.votes || {};
+
+  closeExistingReviewModal();
+
+  if (state.review.url) {
+    state.review.resolvedKind = null;
+    state.review.resolvedPath = "";
+    state.review.resolvedHtml = "";
+    state.review.resolvedSource = "";
+  } else {
+    const result = await resolveEntryFromRepo(repo);
+    if (!result.error) {
+      state.review.resolvedKind = result.kind;
+      state.review.resolvedPath = result.path;
+      state.review.resolvedHtml = result.kind === "html" ? result.html : "";
+      state.review.resolvedSource = result.kind === "source" ? result.source : "";
+    }
+  }
+
+  state.created = true;
+  save();
+  openWorkspace();
+};
+
+el.existingReviewClose.addEventListener("click", closeExistingReviewModal);
+el.existingReviewStartNew.addEventListener("click", closeExistingReviewModal);
+
+el.inRepo.addEventListener("blur", async () => {
+  const value = el.inRepo.value.trim();
+  if (!value || value === lastScannedRepo) return;
+  lastScannedRepo = value;
+
+  const found = await scanForExistingReviews(value);
+  if (found.length && el.inRepo.value.trim() === value) {
+    openExistingReviewModal(found);
+  }
 });
 
 /* ---------- wizard: step 4, review name ---------- */
@@ -936,6 +1091,7 @@ const renderStep = () => {
   el.progress.style.width = `${(step / STEPS.length) * 100}%`;
   el.error.textContent = "";
   closeTokenInfo();
+  closeExistingReviewModal();
 
   el.steps.forEach((node) => node.classList.toggle("is-active", Number(node.dataset.step) === step));
   el.btnBack.classList.toggle("is-hidden", step === 1);

@@ -79,6 +79,25 @@
             </ol>
           </div>
 
+          <!-- EXISTING REVIEW MODAL (surfaced after entering a repo that
+               already has a tminus-* branch) -->
+          <div class="modal is-hidden" id="existing-review-modal">
+            <div class="modal-head">
+              <span class="micro">Existing review found</span>
+              <button type="button" class="link micro" id="existing-review-close">Close</button>
+            </div>
+            <p class="hint">
+              This repo already has a review. Join one to see and add to the same
+              comments, or start a new one.
+            </p>
+            <div id="existing-review-list"></div>
+            <div class="composer-btns">
+              <button type="button" class="btn btn-quiet" id="existing-review-start-new">
+                Start a new review instead
+              </button>
+            </div>
+          </div>
+
           <!-- 3 -->
           <fieldset class="step" data-step="3">
             <label class="field">
