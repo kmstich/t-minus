@@ -502,6 +502,24 @@ const describeFetchError = (err, context = "GitHub") => {
   );
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// A dropped packet or a momentary DNS/Wi-Fi hiccup throws the exact
+// same bare TypeError as a genuinely unreachable host, and is common
+// enough that failing a whole lookup over one blip — right before
+// telling someone to go "check your connection" — is worth ruling out
+// first. One retry after a short pause; a second failure is treated
+// as real, and describeFetchError() explains that one to the user.
+const fetchWithRetry = async (url, options) => {
+  try {
+    return await fetch(url, options);
+  } catch (err) {
+    if (!isNetworkFetchError(err)) throw err;
+    await sleep(800);
+    return fetch(url, options);
+  }
+};
+
 // GitHub-facing errors are near-meaningless on their own ("GitHub API
 // 403") — say what actually happened and what to do about it.
 const describeGithubError = (status, hasToken) => {
@@ -516,7 +534,7 @@ const describeGithubError = (status, hasToken) => {
 };
 
 const ghContents = async (owner, repo, path = "", token = "") => {
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+  const res = await fetchWithRetry(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
     headers: {
       Accept: "application/vnd.github+json",
       ...(token ? { Authorization: `token ${token}` } : {}),
@@ -589,7 +607,7 @@ const resolveEntryFromRepo = async (repoInput, token = "") => {
   let fileRes;
   let text;
   try {
-    fileRes = await fetch(entry.downloadUrl, token ? { headers: { Authorization: `token ${token}` } } : {});
+    fileRes = await fetchWithRetry(entry.downloadUrl, token ? { headers: { Authorization: `token ${token}` } } : {});
     if (!fileRes.ok) return { error: `${describeGithubError(fileRes.status, !!token)} — could not fetch ${entry.path}` };
     text = await fileRes.text();
   } catch (err) {
@@ -704,7 +722,7 @@ const b64DecodeUnicode = (str) =>
 
 const ghAuthFetch = async (path, token, options = {}) => {
   touchGithubToken();
-  const res = await fetch(`https://api.github.com/${path}`, {
+  const res = await fetchWithRetry(`https://api.github.com/${path}`, {
     ...options,
     headers: {
       Accept: "application/vnd.github+json",
