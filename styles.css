@@ -944,6 +944,15 @@ button.tag-chip {
   z-index: 8;
 }
 
+#token-info-modal {
+  width: 380px;
+}
+
+.info-steps a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .tag-options {
   display: flex;
   flex-wrap: wrap;

@@ -1205,8 +1205,8 @@ const closeComposerTagModal = () => {
 el.composerTagToggle.addEventListener("click", () => {
   const opening = el.composerTagModal.classList.contains("is-hidden");
   if (opening) {
-    positionBelow(el.composer, el.composerTagModal);
     el.composerTagModal.classList.remove("is-hidden");
+    positionBelow(el.composer, el.composerTagModal);
     showCatcher(closeComposerTagModal);
   } else {
     closeComposerTagModal();
@@ -1225,8 +1225,8 @@ const closeTokenInfo = () => {
 el.tokenInfoToggle.addEventListener("click", () => {
   const opening = el.tokenInfoModal.classList.contains("is-hidden");
   if (opening) {
-    positionBelow(el.tokenInfoToggle, el.tokenInfoModal);
     el.tokenInfoModal.classList.remove("is-hidden");
+    positionBelow(el.tokenInfoToggle, el.tokenInfoModal);
     showCatcher(closeTokenInfo);
   } else {
     closeTokenInfo();
@@ -1408,9 +1408,13 @@ const renderThreads = () => {
    modal (composer or thread-modal) it belongs to, so the parent modal
    itself never has to show the full tag library at once. */
 
+// call this AFTER unhiding targetEl — its height reads as 0 while
+// display:none, which defeats the clamp below
 const positionBelow = (anchorEl, targetEl) => {
   const rect = anchorEl.getBoundingClientRect();
-  targetEl.style.top = `${rect.bottom + 8}px`;
+  const maxTop = window.innerHeight - targetEl.offsetHeight - 16;
+  const top = Math.max(16, Math.min(rect.bottom + 8, maxTop));
+  targetEl.style.top = `${top}px`;
   targetEl.style.left = `${rect.left}px`;
 };
 
@@ -1529,8 +1533,8 @@ el.closeThreadModal.addEventListener("click", closeThreadModal);
 el.threadModalTagToggle.addEventListener("click", () => {
   const opening = el.threadTagModal.classList.contains("is-hidden");
   if (opening) {
-    positionBelow(el.threadModal, el.threadTagModal);
     el.threadTagModal.classList.remove("is-hidden");
+    positionBelow(el.threadModal, el.threadTagModal);
     showCatcher(closeThreadTagModal);
   } else {
     closeThreadTagModal();

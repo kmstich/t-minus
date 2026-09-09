@@ -70,12 +70,38 @@
               <button type="button" class="link micro" id="token-info-close">Close</button>
             </div>
             <ol class="info-steps">
-              <li>Go to GitHub → Settings → Developer settings → Personal access tokens.</li>
-              <li>Generate a new token (fine-grained is fine) scoped to just this repository.</li>
-              <li>Grant it "Contents: Read and write" access.</li>
-              <li>Copy the token and paste it here. It's stored only in this browser and used
-                only to write a dedicated tminus-* branch on this repo — never main, never
-                any other repo.</li>
+              <li>
+                On GitHub, click your profile photo in the top-right corner, then click
+                <strong>Settings</strong>.
+              </li>
+              <li>
+                Scroll all the way to the bottom of the left sidebar and click
+                <strong>Developer settings</strong>.
+              </li>
+              <li>
+                Click <strong>Personal access tokens</strong>, then
+                <strong>Fine-grained tokens</strong>, then the green
+                <strong>Generate new token</strong> button.
+                (Direct link:
+                <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener"
+                  >github.com/settings/tokens</a
+                >)
+              </li>
+              <li>Give it any name (e.g. "T-Minus") and set an expiration date.</li>
+              <li>
+                Under <strong>Repository access</strong>, choose
+                <strong>Only select repositories</strong> and pick this one.
+              </li>
+              <li>
+                Under <strong>Permissions → Repository permissions</strong>, find
+                <strong>Contents</strong> and change it from "No access" to
+                <strong>Read and write</strong>.
+              </li>
+              <li>Scroll down and click <strong>Generate token</strong>.</li>
+              <li>
+                GitHub shows the token only once — copy it right away, then come back and
+                paste it into the field here.
+              </li>
             </ol>
             <p class="hint">
               Without it, your comments only exist in your own browser — nobody else on the
