@@ -52,7 +52,7 @@
               <span class="micro-row">
                 <span class="micro">GitHub token (required)</span>
                 <button type="button" class="info-toggle-btn" id="token-info-toggle" aria-label="Why this is required and how to get one">
-                  ℹ
+                  ⓘ
                 </button>
               </span>
               <input id="in-token" type="password" autocomplete="off" />
@@ -238,7 +238,7 @@
         <!-- MODE TOOLBAR -->
         <div class="segmented mode-toolbar" id="mode-toolbar" role="group" aria-label="Review mode">
           <button type="button" class="segmented-btn is-on" id="mode-interact" aria-label="Inspect">
-            ↖
+            🔍
             <span>Inspect</span>
           </button>
           <button type="button" class="segmented-btn" id="mode-comment" aria-label="Comment">
@@ -260,6 +260,10 @@
         <div class="sidebar-body">
           <p class="comments-heading" id="comments-heading">Comments (0)</p>
           <div id="threads" class="threads"></div>
+          <p class="sync-status" id="sync-status-label">
+            <span class="sync-status-icon" id="sync-status-icon"></span>
+            <span id="sync-status-text">Not synced</span>
+          </p>
         </div>
 
         <div class="sidebar-foot">
@@ -270,10 +274,6 @@
               <button type="button" class="segmented-btn" id="vote-nogo" aria-pressed="false">No-go</button>
             </div>
           </div>
-          <p class="sync-status" id="sync-status-label">
-            <span class="sync-status-icon" id="sync-status-icon"></span>
-            <span id="sync-status-text">Not synced</span>
-          </p>
         </div>
       </aside>
 
