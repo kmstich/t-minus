@@ -480,6 +480,28 @@ const parseGithubRepo = (input) => {
   }
 };
 
+// `fetch()` itself throws a bare TypeError ("Failed to fetch" in
+// Chrome, "NetworkError when attempting to fetch resource." in
+// Firefox) whenever the request never got a response at all — lost
+// connection, DNS failure, a browser extension blocking it, CORS,
+// GitHub unreachable. Browsers deliberately don't say which, for
+// security reasons, so the best we can do is rule out "offline" and
+// name the realistic remaining causes rather than parrot the raw
+// message back at someone.
+const isNetworkFetchError = (err) => err instanceof TypeError && /fetch|network/i.test(err.message);
+
+const describeFetchError = (err, context = "GitHub") => {
+  if (!isNetworkFetchError(err)) return err.message;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return `Couldn't reach ${context} — you appear to be offline. Check your connection and try again.`;
+  }
+  return (
+    `Couldn't reach ${context} — the request never got a response. This is usually a dropped connection, ` +
+    `a browser extension (ad blocker/privacy tool) blocking it, or ${context} being unreachable from this ` +
+    "network. Check your connection and try again."
+  );
+};
+
 // GitHub-facing errors are near-meaningless on their own ("GitHub API
 // 403") — say what actually happened and what to do about it.
 const describeGithubError = (status, hasToken) => {
@@ -554,7 +576,7 @@ const resolveEntryFromRepo = async (repoInput, token = "") => {
   try {
     entry = await findEntryFile(parsed.owner, parsed.repo, token);
   } catch (err) {
-    return { error: err.message };
+    return { error: describeFetchError(err) };
   }
 
   if (!entry) {
@@ -564,9 +586,15 @@ const resolveEntryFromRepo = async (repoInput, token = "") => {
     };
   }
 
-  const fileRes = await fetch(entry.downloadUrl, token ? { headers: { Authorization: `token ${token}` } } : {});
-  if (!fileRes.ok) return { error: `${describeGithubError(fileRes.status, !!token)} — could not fetch ${entry.path}` };
-  const text = await fileRes.text();
+  let fileRes;
+  let text;
+  try {
+    fileRes = await fetch(entry.downloadUrl, token ? { headers: { Authorization: `token ${token}` } } : {});
+    if (!fileRes.ok) return { error: `${describeGithubError(fileRes.status, !!token)} — could not fetch ${entry.path}` };
+    text = await fileRes.text();
+  } catch (err) {
+    return { error: describeFetchError(err) };
+  }
 
   if (entry.kind === "html") {
     const rawDir = entry.downloadUrl.slice(0, entry.downloadUrl.lastIndexOf("/") + 1);
@@ -793,7 +821,7 @@ const runSync = async () => {
     syncMessage = path;
   } catch (err) {
     syncStatus = "error";
-    syncMessage = err.message;
+    syncMessage = describeFetchError(err);
   } finally {
     updateSyncUI();
   }
@@ -1042,7 +1070,7 @@ const runResolve = async (repoValue) => {
     }
   } catch (err) {
     el.resolveStatus.textContent = "Not resolved";
-    el.resolveNote.textContent = `Unexpected error — ${err.message}`;
+    el.resolveNote.textContent = describeFetchError(err);
     el.resolveNote.classList.remove("is-hidden");
   } finally {
     el.btnResolve.disabled = false;
@@ -1848,7 +1876,12 @@ el.editResolveBtn.addEventListener("click", async (e) => {
   }
 
   el.editResolveStatus.textContent = "Searching…";
-  const result = await resolveEntryFromRepo(repo, githubToken);
+  let result;
+  try {
+    result = await resolveEntryFromRepo(repo, githubToken);
+  } catch (err) {
+    result = { error: describeFetchError(err) };
+  }
 
   if (result.error) {
     state.review.resolvedKind = null;
@@ -1891,7 +1924,7 @@ el.detailsEdit.addEventListener("submit", async (e) => {
         await verifyRepoAccess(parsed.owner, parsed.repo, newToken);
         setGithubToken(newToken);
       } catch (err) {
-        el.editResolveStatus.textContent = err.message;
+        el.editResolveStatus.textContent = describeFetchError(err);
         return;
       }
     }
