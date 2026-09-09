@@ -556,32 +556,35 @@ const resolveEntryFromRepo = async (repoInput, token = "") => {
  * A teammate pasting the same repo URL has no way to know someone
  * already started a review on it — there's no shared link involved,
  * just the bare repo. So when a repo URL is entered, look for
- * tminus-* branches (that's where a review's synced snapshot lives)
- * and, if any exist, offer to join one instead of silently creating a
- * duplicate review nobody else will ever see. Anonymous/unauthenticated
- * — works for public repos, same as entry-file resolution above.
+ * slug folders under .tminus/ on the default branch (that's where a
+ * review's synced snapshot lives) and, if any exist, offer to join
+ * one instead of silently creating a duplicate review nobody else
+ * will ever see. Anonymous/unauthenticated — works for public repos,
+ * same as entry-file resolution above.
  */
 
-const listBranches = async (owner, repo) => {
+const listReviewSlugs = async (owner, repo) => {
   try {
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches?per_page=100`, {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/.tminus`, {
       headers: { Accept: "application/vnd.github+json" },
     });
     if (!res.ok) return [];
-    return await res.json();
+    const entries = await res.json();
+    return entries.filter((e) => e.type === "dir").map((e) => e.name).slice(0, 10);
   } catch {
     return [];
   }
 };
 
-const fetchReviewSnapshotFromBranch = async (owner, repo, branch) => {
-  const slug = branch.replace(/^tminus-/, "");
+const fetchReviewSnapshotForSlug = async (owner, repo, slug) => {
   const path = `.tminus/${slug}/comments.json`;
   try {
-    const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`);
+    // HEAD resolves to the repo's default branch, so this never needs
+    // to know or look up its name
+    const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${path}`);
     if (!res.ok) return null;
     const json = await res.json();
-    return { slug, branch, ...json };
+    return { slug, ...json };
   } catch {
     return null;
   }
@@ -590,9 +593,8 @@ const fetchReviewSnapshotFromBranch = async (owner, repo, branch) => {
 const scanForExistingReviews = async (repoInput) => {
   const parsed = parseGithubRepo(repoInput);
   if (!parsed) return [];
-  const branches = await listBranches(parsed.owner, parsed.repo);
-  const matches = branches.filter((b) => b.name.startsWith("tminus-")).slice(0, 10);
-  const snapshots = await Promise.all(matches.map((b) => fetchReviewSnapshotFromBranch(parsed.owner, parsed.repo, b.name)));
+  const slugs = await listReviewSlugs(parsed.owner, parsed.repo);
+  const snapshots = await Promise.all(slugs.map((slug) => fetchReviewSnapshotForSlug(parsed.owner, parsed.repo, slug)));
   return snapshots.filter(Boolean);
 };
 
@@ -600,11 +602,11 @@ const scanForExistingReviews = async (repoInput) => {
  * Optional and opt-in, configured only from the workspace's Details
  * panel (not the wizard). Without a token, everything stays in this
  * browser's localStorage only. With a token, comments and votes are
- * written as a single JSON snapshot file to a dedicated
- * "tminus-<slug>" branch, so main/production branches are never
- * touched. The token itself is stored only in localStorage and sent
- * directly from this browser to api.github.com — there is no T-Minus
- * server to route it through or hide it behind. That's a real
+ * written as a single JSON snapshot file straight to the repo's
+ * default branch — no side branch, no pull request, nothing waiting
+ * on approval. The token itself is stored only in localStorage and
+ * sent directly from this browser to api.github.com — there is no
+ * T-Minus server to route it through or hide it behind. That's a real
  * tradeoff, stated here rather than hidden.
  */
 
@@ -649,47 +651,21 @@ const verifyRepoAccess = async (owner, repo, token) => {
   return res.json();
 };
 
-const getBranchSha = async (owner, repo, branch, token) => {
-  const res = await ghAuthFetch(`repos/${owner}/${repo}/git/ref/heads/${branch}`, token);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-  const json = await res.json();
-  return json.object?.sha || null;
-};
-
-const createBranch = async (owner, repo, branch, fromSha, token) => {
-  const res = await ghAuthFetch(`repos/${owner}/${repo}/git/refs`, token, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: fromSha }),
-  });
-  if (!res.ok) throw new Error(`Could not create branch (${res.status})`);
-};
-
-const ensureSyncBranch = async (owner, repo, slug, token) => {
-  const branch = `tminus-${slug}`;
-  const existing = await getBranchSha(owner, repo, branch, token);
-  if (existing) return branch;
-  const repoInfo = await verifyRepoAccess(owner, repo, token);
-  const baseSha = await getBranchSha(owner, repo, repoInfo.default_branch, token);
-  if (!baseSha) throw new Error("Could not read default branch");
-  await createBranch(owner, repo, branch, baseSha, token);
-  return branch;
-};
-
-const getFileSha = async (owner, repo, path, branch, token) => {
-  const res = await ghAuthFetch(`repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`, token);
+const getFileSha = async (owner, repo, path, token) => {
+  const res = await ghAuthFetch(`repos/${owner}/${repo}/contents/${path}`, token);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`GitHub API ${res.status}`);
   const json = await res.json();
   return json.sha || null;
 };
 
-const putFile = async (owner, repo, path, branch, content, message, sha, token) => {
+// writes straight to the repo's default branch — omitting `branch`
+// lets the Contents API pick it, so this never needs to look it up
+const putFile = async (owner, repo, path, content, message, sha, token) => {
   const res = await ghAuthFetch(`repos/${owner}/${repo}/contents/${path}`, token, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, branch, content: b64EncodeUnicode(content), ...(sha ? { sha } : {}) }),
+    body: JSON.stringify({ message, content: b64EncodeUnicode(content), ...(sha ? { sha } : {}) }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -735,7 +711,6 @@ const runSync = async () => {
     if (!parsed) throw new Error("Invalid repository URL");
 
     const slug = state.review.slug || slugify(state.review.title || "review");
-    const branch = await ensureSyncBranch(parsed.owner, parsed.repo, slug, githubToken);
     const path = `.tminus/${slug}/comments.json`;
 
     const payload = JSON.stringify(
@@ -759,12 +734,11 @@ const runSync = async () => {
       2,
     );
 
-    const existingSha = await getFileSha(parsed.owner, parsed.repo, path, branch, githubToken);
+    const existingSha = await getFileSha(parsed.owner, parsed.repo, path, githubToken);
     await putFile(
       parsed.owner,
       parsed.repo,
       path,
-      branch,
       payload,
       `T-Minus: update comments (${state.comments.length} total)`,
       existingSha,
@@ -772,7 +746,7 @@ const runSync = async () => {
     );
 
     syncStatus = "synced";
-    syncMessage = `${path} on ${branch}`;
+    syncMessage = path;
   } catch (err) {
     syncStatus = "error";
     syncMessage = err.message;
@@ -795,7 +769,7 @@ const scheduleSync = () => {
 
 /* ---------- pulling other reviewers' comments back in ----------
  * The write side (above) pushes this browser's comments/votes to
- * .tminus/<slug>/comments.json on the tminus-<slug> branch. Without a
+ * .tminus/<slug>/comments.json on the repo's default branch. Without a
  * read side, that file was a write-only backup nobody ever saw — this
  * fetches it back and merges it into local state, so multiple people
  * commenting on the same repo actually see each other. Reading is
@@ -805,16 +779,16 @@ const scheduleSync = () => {
  */
 
 const fetchRemoteSnapshot = async (owner, repo, slug) => {
-  const branch = `tminus-${slug}`;
   const path = `.tminus/${slug}/comments.json`;
   try {
     if (githubToken) {
-      const res = await ghAuthFetch(`repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`, githubToken);
+      const res = await ghAuthFetch(`repos/${owner}/${repo}/contents/${path}`, githubToken);
       if (!res.ok) return null;
       const json = await res.json();
       return JSON.parse(b64DecodeUnicode(json.content));
     }
-    const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`);
+    // HEAD resolves to the repo's default branch
+    const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${path}`);
     if (!res.ok) return null;
     return await res.json();
   } catch {
