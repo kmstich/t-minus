@@ -600,7 +600,16 @@ const fetchResolvedFile = async (entry, token = "") => {
   let fileRes;
   let text;
   try {
-    fileRes = await fetchWithRetry(entry.downloadUrl, token ? { headers: { Authorization: `token ${token}` } } : {});
+    // deliberately no Authorization header here: download_url points
+    // at raw.githubusercontent.com, a different origin from
+    // api.github.com, and it doesn't grant CORS for a custom
+    // Authorization header — a cross-origin fetch that adds one fails
+    // its preflight and throws the exact same network-level error as
+    // a dropped connection, every single time, not just occasionally.
+    // download_url doesn't need one anyway: for a private repo it
+    // already has short-lived, pre-authorized access baked into its
+    // query string, generated when the Contents API returned it.
+    fileRes = await fetchWithRetry(entry.downloadUrl);
     if (!fileRes.ok) return { error: `${describeGithubError(fileRes.status, !!token)} — could not fetch ${entry.path}` };
     text = await fileRes.text();
   } catch (err) {
