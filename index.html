@@ -347,24 +347,23 @@
 
       <!-- COMMENT COMPOSER MODAL -->
       <form class="modal composer is-hidden" id="composer">
-        <div class="modal-head">
-          <span class="micro">New comment</span>
-          <button type="button" class="icon-close-btn" id="composer-close" aria-label="Close">
-            ✕
-          </button>
-        </div>
-
-        <div class="thread-tags" id="composer-tags"></div>
+        <button type="button" class="icon-close-btn composer-close" id="composer-close" aria-label="Close">
+          ✕
+        </button>
 
         <div class="comment-input-row">
           <span class="avatar" id="composer-avatar"></span>
-          <textarea id="comment-body" rows="1" placeholder="Add a comment"></textarea>
-          <button type="submit" class="send-btn" id="composer-send" aria-label="Post comment" disabled>
-            ↑
-          </button>
-          <button type="button" class="tag-toggle-btn" id="composer-tag-toggle" aria-label="Tags">
-            🏷️
-          </button>
+          <div class="comment-input-box">
+            <textarea id="comment-body" rows="1" placeholder="Add a comment"></textarea>
+            <div class="comment-input-actions">
+              <button type="button" class="emoji-toggle-btn" id="composer-emoji-toggle" aria-label="Insert emoji">
+                😊
+              </button>
+              <button type="submit" class="send-btn" id="composer-send" aria-label="Post comment" disabled>
+                ↑
+              </button>
+            </div>
+          </div>
         </div>
       </form>
 
@@ -399,37 +398,31 @@
         </div>
         <p class="thread-body" id="thread-modal-text"></p>
 
-        <div class="reactions-row" id="thread-modal-reactions"></div>
-
-        <div class="thread-tags" id="thread-modal-tags"></div>
-
         <div class="replies" id="thread-modal-replies"></div>
+
+        <!-- applied tags + reactions live at the bottom of the
+             container, right above the reply row that adds more of
+             either, rather than up next to the comment text -->
+        <div class="thread-tags" id="thread-modal-tags"></div>
+        <div class="reactions-row" id="thread-modal-reactions"></div>
 
         <form class="comment-input-row" id="thread-modal-reply-form">
           <span class="avatar" id="thread-modal-reply-avatar"></span>
-          <input type="text" id="thread-modal-reply-input" placeholder="Reply" autocomplete="off" />
-          <button type="submit" class="send-btn" id="thread-modal-reply-send" aria-label="Send reply" disabled>
-            ↑
-          </button>
-          <button type="button" class="tag-toggle-btn" id="thread-modal-tag-toggle" aria-label="Tags">
-            🏷️
-          </button>
+          <div class="comment-input-box">
+            <textarea id="thread-modal-reply-input" rows="1" placeholder="Reply"></textarea>
+            <div class="comment-input-actions">
+              <button type="button" class="emoji-toggle-btn" id="thread-modal-emoji-toggle" aria-label="Insert emoji">
+                😊
+              </button>
+              <button type="button" class="tag-toggle-btn" id="thread-modal-tag-toggle" aria-label="Tags">
+                🏷️
+              </button>
+              <button type="submit" class="send-btn" id="thread-modal-reply-send" aria-label="Send reply" disabled>
+                ↑
+              </button>
+            </div>
+          </div>
         </form>
-      </div>
-
-      <!-- COMPOSER TAG PICKER (child modal, appears below the composer) -->
-      <div class="modal tag-modal is-hidden" id="composer-tag-modal">
-        <div class="modal-head">
-          <span class="micro">Tags</span>
-          <button type="button" class="icon-close-btn" id="composer-tag-modal-close" aria-label="Close">
-            ✕
-          </button>
-        </div>
-        <div class="tag-options" id="composer-tag-options"></div>
-        <div class="tag-add-row">
-          <input type="text" id="composer-tag-input" maxlength="24" />
-          <button type="button" class="link micro" id="composer-tag-add">Add</button>
-        </div>
       </div>
 
       <!-- THREAD TAG PICKER (child modal, appears below the thread modal) -->
@@ -450,6 +443,14 @@
       <!-- REACTION PICKER (child modal, appears below the reactions row's + button) -->
       <div class="modal reaction-picker is-hidden" id="reaction-picker-modal">
         <div class="reaction-picker-options" id="reaction-picker-options"></div>
+      </div>
+
+      <!-- EMOJI INSERT PICKER (child modal, appears below either 😊 button) —
+           distinct from the reaction picker above: this inserts a character
+           into whichever textarea's 😊 button opened it, rather than
+           tallying a reaction on an existing comment -->
+      <div class="modal reaction-picker is-hidden" id="emoji-insert-modal">
+        <div class="reaction-picker-options" id="emoji-insert-options"></div>
       </div>
 
       <!-- lives inside screen-workspace (rather than as a page-level

@@ -120,7 +120,6 @@ let githubToken = readGithubToken();
 let step = 1;
 let mode = "interact";
 let anchor = null;
-let composerTags = [];
 let openThreadId = null;
 
 const save = () => localStorage.setItem(KEY_STATE, JSON.stringify(state));
@@ -216,19 +215,12 @@ const el = {
   composer: $("#composer"),
   composerAvatar: $("#composer-avatar"),
   commentBody: $("#comment-body"),
-  composerTags: $("#composer-tags"),
-  composerTagToggle: $("#composer-tag-toggle"),
   composerSend: $("#composer-send"),
   composerClose: $("#composer-close"),
+  composerEmojiToggle: $("#composer-emoji-toggle"),
 
   clickCatcher: $("#click-catcher"),
   clickCatcherWorkspace: $("#click-catcher-workspace"),
-
-  composerTagModal: $("#composer-tag-modal"),
-  composerTagModalClose: $("#composer-tag-modal-close"),
-  composerTagOptions: $("#composer-tag-options"),
-  composerTagInput: $("#composer-tag-input"),
-  composerTagAdd: $("#composer-tag-add"),
 
   threadModal: $("#thread-modal"),
   closeThreadModal: $("#close-thread-modal"),
@@ -241,6 +233,9 @@ const el = {
   threadModalReactions: $("#thread-modal-reactions"),
   reactionPickerModal: $("#reaction-picker-modal"),
   reactionPickerOptions: $("#reaction-picker-options"),
+  emojiInsertModal: $("#emoji-insert-modal"),
+  emojiInsertOptions: $("#emoji-insert-options"),
+  threadModalEmojiToggle: $("#thread-modal-emoji-toggle"),
   threadModalReplies: $("#thread-modal-replies"),
   threadModalReplyForm: $("#thread-modal-reply-form"),
   threadModalReplyAvatar: $("#thread-modal-reply-avatar"),
@@ -544,6 +539,53 @@ const renderReactions = (container, c) => {
   addBtn.innerHTML = ADD_FIELD_ICON;
   addBtn.addEventListener("click", () => openReactionPicker(addBtn, c, () => renderReactions(container, c)));
   container.appendChild(addBtn);
+};
+
+/* ---------- emoji-insert picker ----------
+ * Distinct from the reaction picker above: this one is opened from a
+ * comment/reply's own 😊 button and inserts the chosen character into
+ * that textarea at the cursor position — typing with emoji, not
+ * reacting to a posted comment.
+ */
+
+const insertEmojiAtCursor = (textarea, emoji) => {
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? textarea.value.length;
+  textarea.value = textarea.value.slice(0, start) + emoji + textarea.value.slice(end);
+  const caret = start + emoji.length;
+  textarea.setSelectionRange(caret, caret);
+  textarea.focus();
+  // re-fires the input listeners already wired to each textarea (send
+  // enable/disable, auto-grow) since setting .value directly doesn't
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+};
+
+const closeEmojiInsertPicker = () => {
+  el.emojiInsertModal.classList.add("is-hidden");
+  hideCatcher();
+};
+
+const openEmojiInsertPicker = (anchorEl, textarea) => {
+  el.emojiInsertOptions.innerHTML = "";
+  REACTION_EMOJIS.forEach((emoji) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "reaction-option";
+    btn.textContent = emoji;
+    btn.addEventListener("click", () => {
+      insertEmojiAtCursor(textarea, emoji);
+      closeEmojiInsertPicker();
+    });
+    el.emojiInsertOptions.appendChild(btn);
+  });
+  el.emojiInsertModal.classList.remove("is-hidden");
+  positionBelow(anchorEl, el.emojiInsertModal);
+  showCatcher(closeEmojiInsertPicker, "workspace");
+};
+
+const autoGrowTextarea = (textarea) => {
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
 };
 
 /* ---------- repository entry-file resolution ----------
@@ -1613,45 +1655,6 @@ el.btnBack.addEventListener("click", () => {
 
 const visible = () => state.comments.filter((c) => state.showResolved || !c.resolved);
 
-const renderComposerTags = () => {
-  renderTagList(el.composerTags, composerTags, {
-    removable: true,
-    onRemove: (tag) => {
-      composerTags = composerTags.filter((t) => t.id !== tag.id);
-      renderComposerTags();
-    },
-  });
-  renderTagOptions(el.composerTagOptions, composerTags, (tag) => {
-    const idx = composerTags.findIndex((t) => t.id === tag.id);
-    if (idx === -1) composerTags.push(tag);
-    else composerTags.splice(idx, 1);
-    renderComposerTags();
-  });
-};
-
-wireCustomTagAdd(el.composerTagInput, el.composerTagAdd, (tag) => {
-  composerTags.push(tag);
-  renderComposerTags();
-});
-
-const closeComposerTagModal = () => {
-  el.composerTagModal.classList.add("is-hidden");
-  hideCatcher();
-};
-
-el.composerTagToggle.addEventListener("click", () => {
-  const opening = el.composerTagModal.classList.contains("is-hidden");
-  if (opening) {
-    el.composerTagModal.classList.remove("is-hidden");
-    positionBelow(el.composer, el.composerTagModal);
-    showCatcher(closeComposerTagModal, "workspace");
-  } else {
-    closeComposerTagModal();
-  }
-});
-
-el.composerTagModalClose.addEventListener("click", closeComposerTagModal);
-
 /* ---------- token info popover ---------- */
 
 const closeTokenInfo = () => {
@@ -1676,10 +1679,8 @@ const closeComposer = () => {
   anchor = null;
   el.composer.classList.add("is-hidden");
   el.commentBody.value = "";
+  el.commentBody.style.height = "";
   el.composerSend.disabled = true;
-  composerTags = [];
-  renderComposerTags();
-  closeComposerTagModal();
 };
 
 /* ---------- pin hover preview + drag-to-reposition ----------
@@ -2073,6 +2074,11 @@ wireCustomTagAdd(el.threadModalTagInput, el.threadModalTagAdd, (t) => {
 
 el.threadModalReplyInput.addEventListener("input", () => {
   el.threadModalReplySend.disabled = !el.threadModalReplyInput.value.trim();
+  autoGrowTextarea(el.threadModalReplyInput);
+});
+
+el.threadModalEmojiToggle.addEventListener("click", () => {
+  openEmojiInsertPicker(el.threadModalEmojiToggle, el.threadModalReplyInput);
 });
 
 el.threadModalReplyForm.addEventListener("submit", (e) => {
@@ -2083,6 +2089,7 @@ el.threadModalReplyForm.addEventListener("submit", (e) => {
   c.replies.push({ id: crypto.randomUUID(), author: state.creator.name, body, createdAt: new Date().toISOString() });
   touch(c);
   el.threadModalReplyInput.value = "";
+  el.threadModalReplyInput.style.height = "";
   el.threadModalReplySend.disabled = true;
   save();
   scheduleSync();
@@ -2446,8 +2453,6 @@ el.overlay.addEventListener("click", (e) => {
     y: (e.clientY - rect.top) / rect.height,
   };
 
-  composerTags = [];
-  renderComposerTags();
   el.composerAvatar.style.setProperty("--avatar-color", authorColor(state.creator.name || "T"));
   el.composerAvatar.textContent = (state.creator.name || "T").charAt(0).toUpperCase();
   el.composer.classList.remove("is-hidden");
@@ -2465,7 +2470,7 @@ el.composer.addEventListener("submit", (e) => {
     id: crypto.randomUUID(),
     author: state.creator.name,
     body,
-    tags: composerTags.map((t) => ({ ...t })),
+    tags: [],
     reactions: {},
     resolved: false,
     createdAt: now,
@@ -2484,6 +2489,11 @@ el.composerClose.addEventListener("click", closeComposer);
 
 el.commentBody.addEventListener("input", () => {
   el.composerSend.disabled = !el.commentBody.value.trim();
+  autoGrowTextarea(el.commentBody);
+});
+
+el.composerEmojiToggle.addEventListener("click", () => {
+  openEmojiInsertPicker(el.composerEmojiToggle, el.commentBody);
 });
 
 /* ---------- boot ---------- */
@@ -2497,7 +2507,6 @@ el.inTzero.value = toDateInput(state.review.tzero);
 initBriefFields(el.briefChecklist, el.addBriefField, state.review.briefAreas);
 initBriefFields(el.editBriefChecklist, el.editAddBriefField, []);
 
-renderComposerTags();
 setMode("interact");
 
 if (state.created) {

@@ -105,6 +105,7 @@ textarea {
 .icon-btn,
 .icon-close-btn,
 .tag-toggle-btn,
+.emoji-toggle-btn,
 .send-btn,
 .reaction-add-btn,
 .file-picker-icon,
@@ -1298,10 +1299,22 @@ button.tag-chip {
   border: 0;
 }
 
-.thread-modal .modal-head,
-.composer .modal-head {
+.thread-modal .modal-head {
   border-bottom: 1px solid var(--line-2);
   padding-bottom: var(--sp-3);
+}
+
+/* composer has no header row at all (see the HTML comment on
+   #composer-close) — its close button floats over the top-right
+   corner instead */
+.composer {
+  padding-top: var(--sp-9);
+}
+
+.composer-close {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
 }
 
 .modal-head-actions {
@@ -1319,13 +1332,14 @@ button.tag-chip {
   border-radius: 50%;
 }
 
-/* the always-visible "add a comment" / reply row: avatar, a pill
-   input that takes the remaining width, then the tag toggle and the
-   send button both trailing at its end — the one shared, consistent
-   spot for the tag button across the composer and the thread modal */
+/* the always-visible "add a comment" / reply row: avatar beside a
+   box that's a plain pill by default and expands into a taller,
+   bordered box — actions moving from inline-trailing to a divided
+   bottom row — once it's focused, per the Figma reference this is
+   modeled on */
 .comment-input-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--sp-2);
   margin-top: var(--sp-3);
 }
@@ -1334,23 +1348,55 @@ button.tag-chip {
   width: 32px;
   height: 32px;
   font-size: var(--fs-micro);
+  margin-top: 1px;
 }
 
-.comment-input-row input,
-.comment-input-row textarea {
+.comment-input-box {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+}
+
+.comment-input-box:focus-within {
+  flex-direction: column;
+  align-items: stretch;
+  border-radius: var(--radius-btn);
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue);
+}
+
+.comment-input-box textarea {
   flex: 1;
   min-width: 0;
   resize: none;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
+  border: 0;
+  background: none;
   padding: var(--sp-2) var(--sp-4);
   font-size: var(--fs-micro);
   line-height: 1.4;
-  max-height: 96px;
+  max-height: 160px;
+  overflow-y: auto;
 }
 
-.comment-input-row textarea {
-  border-bottom: 1px solid var(--line-2);
+.comment-input-box:focus-within textarea {
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.comment-input-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex: none;
+  padding-right: var(--sp-1);
+}
+
+.comment-input-box:focus-within .comment-input-actions {
+  border-top: 1px solid var(--line-2);
+  justify-content: flex-end;
+  padding: var(--sp-2) var(--sp-3);
 }
 
 .send-btn {
@@ -1371,6 +1417,25 @@ button.tag-chip {
   background: var(--line-2);
   color: var(--ink-2);
   cursor: default;
+}
+
+.emoji-toggle-btn {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-2);
+  background: var(--white);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.emoji-toggle-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
 }
 
 .modal-head {
