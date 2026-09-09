@@ -872,6 +872,14 @@ const commitStep = () => {
   save();
 };
 
+// Pressing Enter in any text field submits the enclosing <form>
+// natively; without this, that submit has no handler and the browser
+// just reloads the page, silently discarding whatever was typed.
+document.getElementById("wizard-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  el.btnNext.click();
+});
+
 el.btnNext.addEventListener("click", () => {
   if (step === 2 && el.inRepo.value.trim()) state.review.repoConnected = true;
 
