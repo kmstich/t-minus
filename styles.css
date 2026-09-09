@@ -150,7 +150,7 @@ textarea {
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.02em;
-  margin: var(--sp-3) 0 var(--sp-3);
+  margin: 0 0 var(--sp-6);
   max-width: 720px;
   color: var(--ink);
   /* reserves 2 lines so shorter/longer step titles don't shift the
@@ -195,7 +195,7 @@ textarea {
   height: 8px;
   background: var(--line);
   border-radius: 999px;
-  margin: var(--sp-3) 0 var(--sp-6);
+  margin: var(--sp-2) 0 var(--sp-6);
   position: relative;
   overflow: hidden;
 }
@@ -220,6 +220,10 @@ textarea {
 
 .field {
   display: block;
+}
+
+.field + .field {
+  margin-top: var(--sp-6);
 }
 
 .field span {
@@ -448,7 +452,7 @@ textarea::placeholder {
 .wizard-actions {
   display: flex;
   gap: var(--sp-3);
-  margin-top: var(--sp-9);
+  margin-top: var(--sp-6);
   max-width: 720px;
 }
 
