@@ -215,6 +215,15 @@ textarea {
 }
 
 .step.is-active {
+  /* reserves enough height for step 2 (the tallest of the "normal"
+     steps) so Back/Continue land at the same spot on every step that
+     doesn't need more room than that — a step with genuinely more
+     content (adding focus areas, the review summary) still grows
+     past this and pushes the buttons down, same as before */
+  min-height: 152px;
+}
+
+.step.is-active {
   display: block;
 }
 
