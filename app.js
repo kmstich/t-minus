@@ -596,28 +596,44 @@ const findEntryFile = async (owner, repo, token = "") => {
 // naming-convention auto-detect below and the manual file picker,
 // since both end up with the same {kind, path, downloadUrl} once
 // they've found a candidate, just by different routes
-const fetchResolvedFile = async (entry, token = "") => {
-  let fileRes;
+const fetchResolvedFile = async (owner, repo, entry, token = "") => {
+  // Read the file's own content back from the Contents API itself
+  // (api.github.com), which already returns it inline as base64 for
+  // anything under 1MB — the same response that gave us downloadUrl
+  // in the first place. That avoids a second hop to a different
+  // domain (raw.githubusercontent.com) for the actual bytes, which
+  // some networks (a corporate VPN/proxy, in particular) block
+  // outright even when api.github.com itself is reachable — the
+  // file picker can list a repo's contents just fine on such a
+  // network and still fail here, because listing never leaves
+  // api.github.com but this used to.
   let text;
+  let downloadUrl;
   try {
-    // deliberately no Authorization header here: download_url points
-    // at raw.githubusercontent.com, a different origin from
-    // api.github.com, and it doesn't grant CORS for a custom
-    // Authorization header — a cross-origin fetch that adds one fails
-    // its preflight and throws the exact same network-level error as
-    // a dropped connection, every single time, not just occasionally.
-    // download_url doesn't need one anyway: for a private repo it
-    // already has short-lived, pre-authorized access baked into its
-    // query string, generated when the Contents API returned it.
-    fileRes = await fetchWithRetry(entry.downloadUrl);
-    if (!fileRes.ok) return { error: `${describeGithubError(fileRes.status, !!token)} — could not fetch ${entry.path}` };
-    text = await fileRes.text();
+    const res = await fetchWithRetry(`https://api.github.com/repos/${owner}/${repo}/contents/${entry.path}`, {
+      headers: { Accept: "application/vnd.github+json", ...(token ? { Authorization: `token ${token}` } : {}) },
+    });
+    if (!res.ok) return { error: `${describeGithubError(res.status, !!token)} — could not fetch ${entry.path}` };
+    const info = await res.json();
+    downloadUrl = info.download_url;
+
+    if (info.content) {
+      text = b64DecodeUnicode(info.content);
+    } else if (info.download_url) {
+      // only reached for files over 1MB, where GitHub omits inline
+      // content — a last resort that does cross to the other domain
+      const fileRes = await fetchWithRetry(info.download_url);
+      if (!fileRes.ok) return { error: `${describeGithubError(fileRes.status, !!token)} — could not fetch ${entry.path}` };
+      text = await fileRes.text();
+    } else {
+      return { error: `GitHub returned no readable content for ${entry.path}.` };
+    }
   } catch (err) {
     return { error: describeFetchError(err) };
   }
 
   if (entry.kind === "html") {
-    const rawDir = entry.downloadUrl.slice(0, entry.downloadUrl.lastIndexOf("/") + 1);
+    const rawDir = downloadUrl.slice(0, downloadUrl.lastIndexOf("/") + 1);
     const html = /<base[\s>]/i.test(text)
       ? text
       : text.replace(/<head(\s[^>]*)?>/i, (m) => `${m}\n<base href="${rawDir}">`);
@@ -645,7 +661,7 @@ const resolveEntryFromRepo = async (repoInput, token = "") => {
     };
   }
 
-  return fetchResolvedFile(entry, token);
+  return fetchResolvedFile(parsed.owner, parsed.repo, entry, token);
 };
 
 /* ---------- manual file picker ----------
@@ -728,18 +744,8 @@ const listRepoTree = async (owner, repo, token) => {
 // same {kind, path, html|source}/{error} shape as resolveEntryFromRepo,
 // so both can be applied to state.review the same way
 const resolveManualFile = async (owner, repo, path, token) => {
-  let info;
-  try {
-    const res = await fetchWithRetry(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-      headers: { Accept: "application/vnd.github+json", ...(token ? { Authorization: `token ${token}` } : {}) },
-    });
-    if (!res.ok) return { error: describeGithubError(res.status, !!token) };
-    info = await res.json();
-  } catch (err) {
-    return { error: describeFetchError(err) };
-  }
   const kind = /\.html?$/i.test(path) ? "html" : "source";
-  return fetchResolvedFile({ kind, path, downloadUrl: info.download_url }, token);
+  return fetchResolvedFile(owner, repo, { kind, path }, token);
 };
 
 let filePickerOnPick = null;
