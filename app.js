@@ -449,23 +449,45 @@ const parseGithubRepo = (input) => {
   }
 };
 
-const ghContents = async (owner, repo, path = "") => {
+// GitHub-facing errors are near-meaningless on their own ("GitHub API
+// 403") — say what actually happened and what to do about it.
+const describeGithubError = (status, hasToken) => {
+  if (status === 403) {
+    return hasToken
+      ? "GitHub blocked this (403) — your token likely doesn't have Contents access to this repository. Check the token's permissions."
+      : "GitHub rate-limited this lookup (403) — unauthenticated requests are capped at 60/hour. Go back and add a token, then try again.";
+  }
+  if (status === 401) return "GitHub rejected the token (401) — check it was copied correctly and hasn't expired.";
+  if (status >= 500) return `GitHub is having issues right now (${status}) — try again in a moment.`;
+  return `GitHub API error (${status})`;
+};
+
+const ghContents = async (owner, repo, path = "", token = "") => {
   const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-    headers: { Accept: "application/vnd.github+json" },
+    headers: {
+      Accept: "application/vnd.github+json",
+      ...(token ? { Authorization: `token ${token}` } : {}),
+    },
   });
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+  if (!res.ok) throw new Error(describeGithubError(res.status, !!token));
   return res.json();
 };
 
-const findEntryFile = async (owner, repo) => {
+const findEntryFile = async (owner, repo, token = "") => {
   const matchIn = (list, names) =>
     Array.isArray(list) ? list.find((it) => it.type === "file" && names.includes(it.name.toLowerCase())) : null;
   const dirNamed = (list, name) =>
     Array.isArray(list) ? list.find((it) => it.type === "dir" && it.name.toLowerCase() === name) : null;
 
-  const root = await ghContents(owner, repo);
-  if (!root) throw new Error("Repository not found");
+  const root = await ghContents(owner, repo, "", token);
+  if (!root) {
+    throw new Error(
+      token
+        ? "Repository not found — check the URL, or that this token has access to it."
+        : "Repository not found — check the URL. If it's private, add a token in the previous step.",
+    );
+  }
 
   let hit = matchIn(root, ["index.html"]);
   if (hit) return { kind: "html", path: hit.path, downloadUrl: hit.download_url };
@@ -473,7 +495,7 @@ const findEntryFile = async (owner, repo) => {
   for (const dirName of ["public", "dist", "build"]) {
     const dir = dirNamed(root, dirName);
     if (!dir) continue;
-    const listing = await ghContents(owner, repo, dir.path);
+    const listing = await ghContents(owner, repo, dir.path, token);
     hit = matchIn(listing, ["index.html"]);
     if (hit) return { kind: "html", path: hit.path, downloadUrl: hit.download_url };
   }
@@ -483,7 +505,7 @@ const findEntryFile = async (owner, repo) => {
 
   const src = dirNamed(root, "src");
   if (src) {
-    const listing = await ghContents(owner, repo, src.path);
+    const listing = await ghContents(owner, repo, src.path, token);
     hit = matchIn(listing, ["index.html"]);
     if (hit) return { kind: "html", path: hit.path, downloadUrl: hit.download_url };
     hit = matchIn(listing, ["app.tsx", "app.jsx"]);
@@ -493,15 +515,15 @@ const findEntryFile = async (owner, repo) => {
   return null;
 };
 
-const resolveEntryFromRepo = async (repoInput) => {
+const resolveEntryFromRepo = async (repoInput, token = "") => {
   const parsed = parseGithubRepo(repoInput);
   if (!parsed) return { error: "Not a valid GitHub repository URL" };
 
   let entry;
   try {
-    entry = await findEntryFile(parsed.owner, parsed.repo);
+    entry = await findEntryFile(parsed.owner, parsed.repo, token);
   } catch (err) {
-    return { error: `GitHub lookup failed — ${err.message}` };
+    return { error: err.message };
   }
 
   if (!entry) {
@@ -511,8 +533,8 @@ const resolveEntryFromRepo = async (repoInput) => {
     };
   }
 
-  const fileRes = await fetch(entry.downloadUrl);
-  if (!fileRes.ok) return { error: `Could not fetch ${entry.path}` };
+  const fileRes = await fetch(entry.downloadUrl, token ? { headers: { Authorization: `token ${token}` } } : {});
+  if (!fileRes.ok) return { error: `${describeGithubError(fileRes.status, !!token)} — could not fetch ${entry.path}` };
   const text = await fileRes.text();
 
   if (entry.kind === "html") {
@@ -922,7 +944,7 @@ const joinExistingReview = async (snap) => {
     state.review.resolvedHtml = "";
     state.review.resolvedSource = "";
   } else {
-    const result = await resolveEntryFromRepo(repo);
+    const result = await resolveEntryFromRepo(repo, githubToken);
     if (!result.error) {
       state.review.resolvedKind = result.kind;
       state.review.resolvedPath = result.path;
@@ -980,7 +1002,7 @@ const runResolve = async (repoValue) => {
   el.resolveNote.classList.add("is-hidden");
 
   try {
-    const result = await resolveEntryFromRepo(repoValue);
+    const result = await resolveEntryFromRepo(repoValue, githubToken);
     if (result.error) {
       state.review.resolvedKind = null;
       state.review.resolvedPath = "";
@@ -1763,7 +1785,7 @@ el.editResolveBtn.addEventListener("click", async (e) => {
   }
 
   el.editResolveStatus.textContent = "Searching…";
-  const result = await resolveEntryFromRepo(repo);
+  const result = await resolveEntryFromRepo(repo, githubToken);
 
   if (result.error) {
     state.review.resolvedKind = null;
