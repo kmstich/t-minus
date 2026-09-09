@@ -37,7 +37,7 @@
               <input id="in-creator-name" type="text" placeholder="Kevin Stich" />
             </label>
             <label class="field">
-              <span class="micro">Email</span>
+              <span class="micro">Email (optional)</span>
               <input id="in-creator-email" type="email" placeholder="kevin.stich@target.com" />
             </label>
           </fieldset>
@@ -48,6 +48,15 @@
               <span class="micro">Github link</span>
               <input id="in-repo" type="url" placeholder="https://github.com/team/checkout-prototype" />
             </label>
+            <label class="field">
+              <span class="micro">GitHub token (optional)</span>
+              <input id="in-token" type="password" placeholder="ghp_… or github_pat_…" autocomplete="off" />
+            </label>
+            <p class="hint">
+              Only needed if you want comments written back to this repo, as a dedicated
+              tminus-* branch — never to main, and never to any other repo. Without a token,
+              everything stays in this browser only. Stored only in this browser.
+            </p>
           </fieldset>
 
           <!-- 3 -->
@@ -71,10 +80,10 @@
           <!-- 4 -->
           <fieldset class="step" data-step="4">
             <label class="field">
-              <span class="micro">Name</span>
-              <input id="in-title" type="text" placeholder="Checkout Redesign" />
+              <span class="micro">Name (required)</span>
+              <input id="in-title" type="text" placeholder="Checkout Redesign" maxlength="100" />
             </label>
-            <p class="hint">This field is required.</p>
+            <p class="hint" id="title-char-count">0/100 characters</p>
           </fieldset>
 
           <!-- 5 -->
@@ -154,6 +163,34 @@
           <span class="canvas-brand">T-Minus</span>
           <span class="canvas-countdown" id="countdown">00:00:00</span>
         </div>
+
+        <!-- MODE TOOLBAR -->
+        <div class="mode-toolbar" id="mode-toolbar" role="group" aria-label="Review mode">
+          <button type="button" class="mode-btn is-on" id="mode-interact" aria-label="Inspect">
+            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M2 2l11.5 4.9-4.6 1.9-1.9 4.6L2 2z"
+                fill="none"
+                stroke="currentColor"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span>Inspect</span>
+          </button>
+          <button type="button" class="mode-btn" id="mode-comment" aria-label="Comment">
+            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M2 3.5h12v7H5.5L2.5 13V10.5H2v-7z"
+                fill="none"
+                stroke="currentColor"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span>Comment</span>
+          </button>
+        </div>
       </div>
 
       <!-- RIGHT SIDEBAR -->
@@ -173,42 +210,25 @@
         </div>
 
         <div class="sidebar-foot">
-          <p class="micro">Is this file ready to go?</p>
-          <button type="button" class="btn btn-launch" id="ready-to-launch">Ready to Launch</button>
+          <label class="field">
+            <span class="micro">Is this file ready to go?</span>
+            <select class="vote-select" id="vote-select">
+              <option value="">— Cast your vote —</option>
+              <option value="go">Go</option>
+              <option value="nogo">No-go</option>
+            </select>
+          </label>
+          <dl class="readout">
+            <div><dt class="micro">Open</dt><dd id="stat-open">0</dd></div>
+            <div><dt class="micro">Blockers</dt><dd id="stat-blockers">0</dd></div>
+            <div><dt class="micro">Go / no-go</dt><dd id="stat-votes">0 / 0</dd></div>
+          </dl>
         </div>
       </aside>
 
-      <!-- HAMBURGER MENU -->
-      <div class="modal menu-modal is-hidden" id="menu-modal">
-        <div class="modal-head">
-          <p class="micro">Menu</p>
-          <button type="button" class="link micro" id="close-menu">Close</button>
-        </div>
-
-        <div class="menu-section">
-          <p class="micro">Mode</p>
-          <div class="seg" role="group" aria-label="Review mode">
-            <button type="button" class="seg-btn is-on" id="mode-interact">Interact</button>
-            <button type="button" class="seg-btn" id="mode-comment">Comment</button>
-          </div>
-        </div>
-
-        <div class="menu-section">
-          <p class="micro" id="who">No session</p>
-          <button type="button" class="link micro" id="new-session">New session</button>
-        </div>
-
-        <div class="menu-section">
-          <button type="button" class="link micro" id="toggle-resolved">Show resolved</button>
-        </div>
-
-        <div class="menu-section">
-          <button type="button" class="link micro" id="edit-details">Review details</button>
-        </div>
-
-        <div class="menu-section">
-          <button type="button" class="link micro" id="new-review">Start a new review</button>
-        </div>
+      <!-- HAMBURGER MENU (macOS-style dropdown, left-aligned) -->
+      <div class="menu-modal is-hidden" id="menu-modal" role="menu">
+        <button type="button" class="menu-item" id="new-review" role="menuitem">Start a new review</button>
       </div>
 
       <!-- DETAILS / EDIT MODAL -->
@@ -267,24 +287,6 @@
         </form>
       </div>
 
-      <!-- GO / NO-GO MODAL -->
-      <div class="modal go-modal is-hidden" id="go-modal">
-        <div class="modal-head">
-          <p class="micro">Ready to launch?</p>
-          <button type="button" class="link micro" id="close-go">Close</button>
-        </div>
-        <p class="hint">Votes are anonymous to the review team.</p>
-        <div class="vote">
-          <button type="button" class="vote-btn" id="vote-go">Go</button>
-          <button type="button" class="vote-btn" id="vote-nogo">No-go</button>
-        </div>
-        <dl class="readout">
-          <div><dt class="micro">Open</dt><dd id="stat-open">0</dd></div>
-          <div><dt class="micro">Blockers</dt><dd id="stat-blockers">0</dd></div>
-          <div><dt class="micro">Go / no-go</dt><dd id="stat-votes">0 / 0</dd></div>
-        </dl>
-      </div>
-
       <!-- COMMENT COMPOSER MODAL -->
       <form class="modal composer is-hidden" id="composer">
         <div class="modal-head">
@@ -293,12 +295,20 @@
         </div>
         <textarea id="comment-body" rows="3" placeholder="What isn't working here?"></textarea>
 
-        <div class="tag-picker">
-          <div class="tag-options" id="composer-tag-options"></div>
-          <div class="tag-add-row">
-            <input type="text" id="composer-tag-input" placeholder="Custom tag" maxlength="24" />
-            <button type="button" class="link micro" id="composer-tag-add">Add</button>
-          </div>
+        <div class="tag-row">
+          <div class="thread-tags" id="composer-tags"></div>
+          <button type="button" class="tag-toggle-btn" id="composer-tag-toggle" aria-label="Tags">
+            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M2 2h5.5L14 8.5 8.5 14 2 7.5V2z"
+                fill="none"
+                stroke="currentColor"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+              />
+              <circle cx="5" cy="5" r="1" fill="currentColor" />
+            </svg>
+          </button>
         </div>
 
         <div class="composer-foot">
@@ -328,13 +338,20 @@
         </div>
         <p class="thread-body" id="thread-modal-text"></p>
 
-        <div class="thread-tags" id="thread-modal-tags"></div>
-        <div class="tag-picker is-hidden" id="thread-modal-tag-picker">
-          <div class="tag-options" id="thread-modal-tag-options"></div>
-          <div class="tag-add-row">
-            <input type="text" id="thread-modal-tag-input" placeholder="Custom tag" maxlength="24" />
-            <button type="button" class="link micro" id="thread-modal-tag-add">Add</button>
-          </div>
+        <div class="tag-row">
+          <div class="thread-tags" id="thread-modal-tags"></div>
+          <button type="button" class="tag-toggle-btn" id="thread-modal-tag-toggle" aria-label="Tags">
+            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M2 2h5.5L14 8.5 8.5 14 2 7.5V2z"
+                fill="none"
+                stroke="currentColor"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+              />
+              <circle cx="5" cy="5" r="1" fill="currentColor" />
+            </svg>
+          </button>
         </div>
 
         <div class="replies" id="thread-modal-replies"></div>
@@ -345,9 +362,40 @@
         <div class="thread-acts">
           <button type="button" class="link micro" id="thread-modal-reply-toggle">Reply</button>
           <button type="button" class="link micro" id="thread-modal-resolve">Resolve</button>
-          <button type="button" class="link micro" id="thread-modal-tag-toggle">Tags</button>
         </div>
       </div>
+
+      <!-- COMPOSER TAG PICKER (child modal, appears below the composer) -->
+      <div class="modal tag-modal is-hidden" id="composer-tag-modal">
+        <div class="modal-head">
+          <span class="micro">Tags</span>
+          <button type="button" class="link micro" id="composer-tag-modal-close">Close</button>
+        </div>
+        <div class="tag-options" id="composer-tag-options"></div>
+        <div class="tag-add-row">
+          <input type="text" id="composer-tag-input" placeholder="Custom tag" maxlength="24" />
+          <button type="button" class="link micro" id="composer-tag-add">Add</button>
+        </div>
+      </div>
+
+      <!-- THREAD TAG PICKER (child modal, appears below the thread modal) -->
+      <div class="modal tag-modal is-hidden" id="thread-tag-modal">
+        <div class="modal-head">
+          <span class="micro">Tags</span>
+          <button type="button" class="link micro" id="thread-tag-modal-close">Close</button>
+        </div>
+        <div class="tag-options" id="thread-modal-tag-options"></div>
+        <div class="tag-add-row">
+          <input type="text" id="thread-modal-tag-input" placeholder="Custom tag" maxlength="24" />
+          <button type="button" class="link micro" id="thread-modal-tag-add">Add</button>
+        </div>
+      </div>
+
+      <!-- catches the dismiss-click for the menu / tag popovers, so a
+           click landing inside the prototype iframe (a separate
+           document — clicks there never bubble to ours) still closes
+           whichever popover is open -->
+      <div class="click-catcher is-hidden" id="click-catcher"></div>
     </main>
 
     <!-- NAME GATE -->

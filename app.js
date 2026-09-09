@@ -97,11 +97,13 @@ const el = {
   inCreatorName: $("#in-creator-name"),
   inCreatorEmail: $("#in-creator-email"),
   inRepo: $("#in-repo"),
+  inToken: $("#in-token"),
   resolveStatus: $("#resolve-status"),
   resolveRepoLabel: $("#resolve-repo-label"),
   resolveNote: $("#resolve-note"),
   btnResolve: $("#btn-resolve"),
   inTitle: $("#in-title"),
+  titleCharCount: $("#title-char-count"),
   inTzero: $("#in-tzero"),
   briefChecklist: $("#brief-checklist"),
   addBriefField: $("#add-brief-field"),
@@ -131,16 +133,11 @@ const el = {
   hamburgerBtn: $("#hamburger-btn"),
   commentsHeading: $("#comments-heading"),
   threads: $("#threads"),
-  readyToLaunch: $("#ready-to-launch"),
+  voteSelect: $("#vote-select"),
 
   menuModal: $("#menu-modal"),
-  closeMenu: $("#close-menu"),
   modeInteract: $("#mode-interact"),
   modeComment: $("#mode-comment"),
-  who: $("#who"),
-  newSession: $("#new-session"),
-  toggleResolved: $("#toggle-resolved"),
-  editDetailsBtn: $("#edit-details"),
   newReview: $("#new-review"),
 
   detailsPanel: $("#details-panel"),
@@ -159,10 +156,6 @@ const el = {
   editAddBriefField: $("#edit-add-brief-field"),
   cancelEditDetails: $("#cancel-edit-details"),
 
-  goModal: $("#go-modal"),
-  closeGo: $("#close-go"),
-  voteGo: $("#vote-go"),
-  voteNoGo: $("#vote-nogo"),
   statOpen: $("#stat-open"),
   statBlockers: $("#stat-blockers"),
   statVotes: $("#stat-votes"),
@@ -171,10 +164,17 @@ const el = {
   anchorLabel: $("#anchor-label"),
   commentBody: $("#comment-body"),
   commentBlocker: $("#comment-blocker"),
+  composerTags: $("#composer-tags"),
+  composerTagToggle: $("#composer-tag-toggle"),
+  composerCancel: $("#composer-cancel"),
+
+  clickCatcher: $("#click-catcher"),
+
+  composerTagModal: $("#composer-tag-modal"),
+  composerTagModalClose: $("#composer-tag-modal-close"),
   composerTagOptions: $("#composer-tag-options"),
   composerTagInput: $("#composer-tag-input"),
   composerTagAdd: $("#composer-tag-add"),
-  composerCancel: $("#composer-cancel"),
 
   threadModal: $("#thread-modal"),
   closeThreadModal: $("#close-thread-modal"),
@@ -183,16 +183,18 @@ const el = {
   threadModalMeta: $("#thread-modal-meta"),
   threadModalText: $("#thread-modal-text"),
   threadModalTags: $("#thread-modal-tags"),
-  threadModalTagPicker: $("#thread-modal-tag-picker"),
-  threadModalTagOptions: $("#thread-modal-tag-options"),
-  threadModalTagInput: $("#thread-modal-tag-input"),
-  threadModalTagAdd: $("#thread-modal-tag-add"),
+  threadModalTagToggle: $("#thread-modal-tag-toggle"),
   threadModalReplies: $("#thread-modal-replies"),
   threadModalReplyForm: $("#thread-modal-reply-form"),
   threadModalReplyInput: $("#thread-modal-reply-input"),
   threadModalReplyToggle: $("#thread-modal-reply-toggle"),
   threadModalResolve: $("#thread-modal-resolve"),
-  threadModalTagToggle: $("#thread-modal-tag-toggle"),
+
+  threadTagModal: $("#thread-tag-modal"),
+  threadTagModalClose: $("#thread-tag-modal-close"),
+  threadModalTagOptions: $("#thread-modal-tag-options"),
+  threadModalTagInput: $("#thread-modal-tag-input"),
+  threadModalTagAdd: $("#thread-modal-tag-add"),
 
   gate: $("#gate"),
   gateForm: $("#gate-form"),
@@ -697,6 +699,14 @@ el.inRepo.addEventListener("input", () => {
   state.review.repoConnected = false;
 });
 
+/* ---------- wizard: step 4, review name ---------- */
+
+const updateTitleCharCount = () => {
+  el.titleCharCount.textContent = `${el.inTitle.value.length}/100 characters`;
+};
+
+el.inTitle.addEventListener("input", updateTitleCharCount);
+
 /* ---------- wizard: step 3, resolve entry file ---------- */
 
 const renderResolveStatus = () => {
@@ -765,7 +775,7 @@ const goToStep = (n) => {
 
 const stepValue = () =>
   ({
-    1: el.inCreatorName.value.trim() && el.inCreatorEmail.value.trim() ? "ok" : "",
+    1: el.inCreatorName.value.trim() ? "ok" : "",
     2: el.inRepo.value.trim() ? "ok" : "",
     3: state.review.resolvedKind ? "ok" : "",
     4: el.inTitle.value.trim(),
@@ -843,7 +853,11 @@ const commitStep = () => {
     state.creator.name = el.inCreatorName.value.trim();
     state.creator.email = el.inCreatorEmail.value.trim();
   }
-  if (step === 2) state.review.repo = el.inRepo.value.trim();
+  if (step === 2) {
+    state.review.repo = el.inRepo.value.trim();
+    const token = el.inToken.value.trim();
+    if (token) setGithubToken(token);
+  }
   if (step === 4) state.review.title = el.inTitle.value.trim();
   if (step === 5) state.review.tzero = new Date(el.inTzero.value).toISOString();
   if (step === 6) {
@@ -859,7 +873,7 @@ el.btnNext.addEventListener("click", () => {
   if (!stepValue()) {
     el.error.textContent =
       step === 1
-        ? "Name and email are required"
+        ? "Name is required"
         : step === 2
           ? "Enter a repository to continue"
           : step === 3
@@ -900,6 +914,13 @@ const counts = () => ({
 const visible = () => state.comments.filter((c) => state.showResolved || !c.resolved);
 
 const renderComposerTags = () => {
+  renderTagList(el.composerTags, composerTags, {
+    removable: true,
+    onRemove: (tag) => {
+      composerTags = composerTags.filter((t) => t.id !== tag.id);
+      renderComposerTags();
+    },
+  });
   renderTagOptions(el.composerTagOptions, composerTags, (tag) => {
     const idx = composerTags.findIndex((t) => t.id === tag.id);
     if (idx === -1) composerTags.push(tag);
@@ -913,6 +934,24 @@ wireCustomTagAdd(el.composerTagInput, el.composerTagAdd, (tag) => {
   renderComposerTags();
 });
 
+const closeComposerTagModal = () => {
+  el.composerTagModal.classList.add("is-hidden");
+  hideCatcher();
+};
+
+el.composerTagToggle.addEventListener("click", () => {
+  const opening = el.composerTagModal.classList.contains("is-hidden");
+  if (opening) {
+    positionBelow(el.composer, el.composerTagModal);
+    el.composerTagModal.classList.remove("is-hidden");
+    showCatcher(closeComposerTagModal);
+  } else {
+    closeComposerTagModal();
+  }
+});
+
+el.composerTagModalClose.addEventListener("click", closeComposerTagModal);
+
 const closeComposer = () => {
   anchor = null;
   el.composer.classList.add("is-hidden");
@@ -921,6 +960,7 @@ const closeComposer = () => {
   el.anchorLabel.textContent = "—";
   composerTags = [];
   renderComposerTags();
+  closeComposerTagModal();
   removeGuide();
 };
 
@@ -1002,15 +1042,58 @@ const renderThreads = () => {
   el.statVotes.textContent = `${n.go} / ${n.nogo}`;
 };
 
+/* ---------- shared tag child-modal positioning ----------
+   Stacks a small tag-picker panel directly below whichever comment
+   modal (composer or thread-modal) it belongs to, so the parent modal
+   itself never has to show the full tag library at once. */
+
+const positionBelow = (anchorEl, targetEl) => {
+  const rect = anchorEl.getBoundingClientRect();
+  targetEl.style.top = `${rect.bottom + 8}px`;
+  targetEl.style.left = `${rect.left}px`;
+};
+
+/* ---------- click-catcher ----------
+ * A transparent full-page backdrop that closes whichever popover
+ * (menu, tag picker) is open when clicked. A plain document click
+ * listener can't reliably do this: a click landing inside the
+ * prototype iframe happens in a separate document and never bubbles
+ * up to ours, so the backdrop intercepts it before it reaches the
+ * iframe at all.
+ */
+
+let catcherDismiss = null;
+
+const showCatcher = (onDismiss) => {
+  catcherDismiss = onDismiss;
+  el.clickCatcher.classList.remove("is-hidden");
+};
+
+const hideCatcher = () => {
+  el.clickCatcher.classList.add("is-hidden");
+  catcherDismiss = null;
+};
+
+el.clickCatcher.addEventListener("click", () => {
+  const dismiss = catcherDismiss;
+  hideCatcher();
+  dismiss?.();
+});
+
 /* ---------- thread modal — each comment opens as its own modal
    rather than expanding inline in the sidebar ---------- */
 
 const findComment = (id) => state.comments.find((c) => c.id === id);
 
+const closeThreadTagModal = () => {
+  el.threadTagModal.classList.add("is-hidden");
+  hideCatcher();
+};
+
 const closeThreadModal = () => {
   openThreadId = null;
   el.threadModal.classList.add("is-hidden");
-  el.threadModalTagPicker.classList.add("is-hidden");
+  closeThreadTagModal();
   el.threadModalReplyForm.classList.add("is-hidden");
 };
 
@@ -1065,7 +1148,7 @@ const renderThreadModal = () => {
 
 const openThreadModal = (id) => {
   openThreadId = id;
-  el.threadModalTagPicker.classList.add("is-hidden");
+  closeThreadTagModal();
   el.threadModalReplyForm.classList.add("is-hidden");
   renderThreadModal();
   el.threadModal.classList.remove("is-hidden");
@@ -1074,8 +1157,17 @@ const openThreadModal = (id) => {
 el.closeThreadModal.addEventListener("click", closeThreadModal);
 
 el.threadModalTagToggle.addEventListener("click", () => {
-  el.threadModalTagPicker.classList.toggle("is-hidden");
+  const opening = el.threadTagModal.classList.contains("is-hidden");
+  if (opening) {
+    positionBelow(el.threadModal, el.threadTagModal);
+    el.threadTagModal.classList.remove("is-hidden");
+    showCatcher(closeThreadTagModal);
+  } else {
+    closeThreadTagModal();
+  }
 });
+
+el.threadTagModalClose.addEventListener("click", closeThreadTagModal);
 
 wireCustomTagAdd(el.threadModalTagInput, el.threadModalTagAdd, (t) => {
   const c = findComment(openThreadId);
@@ -1118,10 +1210,7 @@ el.threadModalResolve.addEventListener("click", () => {
 const renderWorkspace = () => {
   el.reviewTitle.textContent = state.review.title;
   el.countdown.textContent = countdown(state.review.tzero);
-  el.who.textContent = session ? `Session / ${session.name}` : "No session";
-  el.toggleResolved.textContent = state.showResolved ? "Hide resolved" : "Show resolved";
-  el.voteGo.classList.toggle("is-on", !!session && state.votes[session.id] === "go");
-  el.voteNoGo.classList.toggle("is-on", !!session && state.votes[session.id] === "nogo");
+  el.voteSelect.value = (session && state.votes[session.id]) || "";
 
   renderPins();
   renderThreads();
@@ -1216,7 +1305,6 @@ const resetToWizard = () => {
   save();
   el.menuModal.classList.add("is-hidden");
   el.detailsPanel.classList.add("is-hidden");
-  el.goModal.classList.add("is-hidden");
   el.composer.classList.add("is-hidden");
   el.threadModal.classList.add("is-hidden");
   openThreadId = null;
@@ -1240,26 +1328,26 @@ const resetToWizard = () => {
 el.modeInteract.addEventListener("click", () => setMode("interact"));
 el.modeComment.addEventListener("click", () => setMode("comment"));
 
-/* ---------- hamburger menu ---------- */
+/* ---------- hamburger menu (macOS-style: click outside to dismiss) ---------- */
 
-el.hamburgerBtn.addEventListener("click", () => el.menuModal.classList.toggle("is-hidden"));
-el.closeMenu.addEventListener("click", () => el.menuModal.classList.add("is-hidden"));
-el.newReview.addEventListener("click", resetToWizard);
+const closeMenu = () => {
+  el.menuModal.classList.add("is-hidden");
+  hideCatcher();
+};
 
-el.newSession.addEventListener("click", () => {
-  session = null;
-  localStorage.removeItem(KEY_SESSION);
-  renderWorkspace();
-  el.gateMeta.textContent = `${state.review.title} / ${countdown(state.review.tzero)}`;
-  el.inName.value = "";
-  el.gate.classList.remove("is-hidden");
-  el.inName.focus();
+el.hamburgerBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const opening = el.menuModal.classList.contains("is-hidden");
+  if (opening) {
+    el.menuModal.classList.remove("is-hidden");
+    showCatcher(closeMenu);
+  } else {
+    closeMenu();
+  }
 });
-
-el.toggleResolved.addEventListener("click", () => {
-  state.showResolved = !state.showResolved;
-  save();
-  renderWorkspace();
+el.newReview.addEventListener("click", () => {
+  closeMenu();
+  resetToWizard();
 });
 
 /* ---------- details / edit panel ---------- */
@@ -1280,7 +1368,6 @@ const openDetailsEdit = () => {
   el.detailsPanel.classList.remove("is-hidden");
 };
 
-el.editDetailsBtn.addEventListener("click", openDetailsEdit);
 el.closeDetails.addEventListener("click", () => el.detailsPanel.classList.add("is-hidden"));
 el.cancelEditDetails.addEventListener("click", () => el.detailsPanel.classList.add("is-hidden"));
 
@@ -1368,9 +1455,6 @@ el.detailsEdit.addEventListener("submit", async (e) => {
 
 /* ---------- go / no-go ---------- */
 
-el.readyToLaunch.addEventListener("click", () => el.goModal.classList.remove("is-hidden"));
-el.closeGo.addEventListener("click", () => el.goModal.classList.add("is-hidden"));
-
 const vote = (value) => {
   if (!session) return;
   state.votes[session.id] = value;
@@ -1379,8 +1463,11 @@ const vote = (value) => {
   renderWorkspace();
 };
 
-el.voteGo.addEventListener("click", () => vote("go"));
-el.voteNoGo.addEventListener("click", () => vote("nogo"));
+el.voteSelect.addEventListener("change", () => {
+  const value = el.voteSelect.value;
+  if (!value) return;
+  vote(value);
+});
 
 /* ---------- comment placement + composer ---------- */
 
@@ -1467,6 +1554,7 @@ el.gateForm.addEventListener("submit", (e) => {
 el.inCreatorName.value = state.creator.name;
 el.inCreatorEmail.value = state.creator.email;
 el.inRepo.value = state.review.repo;
+if (githubToken) el.inToken.placeholder = "Token already saved — leave blank to keep it";
 el.inTitle.value = state.review.title;
 el.inTzero.value = toDateInput(state.review.tzero);
 initBriefFields(el.briefChecklist, el.addBriefField, state.review.briefAreas);
