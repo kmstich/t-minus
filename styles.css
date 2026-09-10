@@ -158,30 +158,25 @@ textarea {
 }
 
 /* WIZARD */
-/* same technical-drawing accent as the review canvas, toned down
-   further — the flow is mostly form content, not an artboard, so the
-   grid needs to sit behind everything without competing for attention */
 .screen {
-  position: relative;
   padding-bottom: var(--sp-20);
-  background-image: linear-gradient(rgba(var(--ink-rgb), 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(var(--ink-rgb), 0.02) 1px, transparent 1px);
-  background-size: 64px 64px;
-}
-
-/* marks the corners of the page itself (not the viewport) — it
-   scrolls with the content, same as the canvas' crosshairs mark the
-   stage rather than floating fixed over it */
-.flow-crosshairs {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
 }
 
 .wizard {
+  position: relative;
   max-width: 1440px;
   margin: 0 auto;
   padding: 60px 160px 80px;
+}
+
+/* technical-drawing accent, close in around the actual content rather
+   than a full background grid or the far screen edges — an open
+   bracket (left/right verticals + a bottom rule) plus corner
+   crosshairs just outside the wizard's own padding */
+.flow-crosshairs {
+  position: absolute;
+  inset: 40px 128px;
+  pointer-events: none;
 }
 
 .wizard-head {
@@ -545,29 +540,21 @@ textarea::placeholder {
   display: flex;
 }
 
-/* fine graph-paper grid, same hairline color as the masthead's own
-   border-bottom — reads clearest in the letterboxed margin around the
-   stage (the stage itself, and the prototype inside it, paint over
-   it), giving the canvas an instrument/technical-drawing feel */
 .canvas {
   position: relative;
   flex: 1;
   min-width: 0;
-  background-color: var(--canvas-bg);
-  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background: var(--canvas-bg);
   overflow: hidden;
 }
 
 /* symmetric corner crosshairs — the canvas' own registration marks,
-   one at each corner at the same inset, purely decorative */
+   one at each corner at the same inset, purely decorative. Comes
+   after .stage in the DOM (both are z-index:auto) so it paints above
+   the prototype, same as the HUD/page-tabs already do. */
 .canvas-crosshairs {
   position: absolute;
   inset: 0;
-  /* no z-index: it needs to stay BEHIND the stage (an explicit
-     z-index here would jump ahead of the stage's own z-index:auto
-     regardless of DOM order) — painting earlier in the DOM than
-     .stage is what keeps it behind */
   pointer-events: none;
 }
 
@@ -618,6 +605,49 @@ textarea::placeholder {
 .crosshair.corner-br {
   bottom: var(--sp-6);
   right: var(--sp-6);
+}
+
+/* a handful of select lines rather than a full grid — an open
+   bracket (left rule, right rule, bottom rule), same hairline color
+   as the masthead's own border-bottom. Shared by the canvas and the
+   flow; each names its own inset (see .canvas-tech-lines/.flow-tech-lines). */
+.tech-line {
+  position: absolute;
+  background: var(--line);
+}
+
+.tech-line.is-left,
+.tech-line.is-right {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.tech-line.is-left {
+  left: 0;
+}
+
+.tech-line.is-right {
+  right: 0;
+}
+
+.tech-line.is-bottom {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+}
+
+.canvas-tech-lines {
+  position: absolute;
+  inset: var(--sp-6);
+  pointer-events: none;
+}
+
+.flow-tech-lines {
+  position: absolute;
+  inset: 40px 128px;
+  pointer-events: none;
 }
 
 /* fixed intrinsic size (see STAGE_WIDTH/STAGE_HEIGHT in app.js) — the
