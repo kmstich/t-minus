@@ -159,7 +159,6 @@ textarea {
 
 /* WIZARD */
 .screen {
-  position: relative;
   padding-bottom: var(--sp-20);
 }
 
@@ -167,15 +166,6 @@ textarea {
   max-width: 1440px;
   margin: 0 auto;
   padding: 60px 160px 80px;
-}
-
-/* technical-drawing accent, full-bleed across the screen (not tucked
-   in around the content) — a generous corner inset keeps the
-   crosshairs clear of the progress bar and step heading */
-.flow-crosshairs {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
 }
 
 .wizard-head {
@@ -643,10 +633,26 @@ textarea::placeholder {
   pointer-events: none;
 }
 
+/* fixed rather than absolute — deliberately crosses the masthead too,
+   rather than starting below it, and stays put as the wizard scrolls */
 .flow-tech-lines {
-  position: absolute;
-  inset: 0;
+  position: fixed;
+  inset: 0 64px;
   pointer-events: none;
+}
+
+/* one crosshair per line, where it meets the bottom of the viewport —
+   centered on the line (the line sits at the container's own left/
+   right edge, so -6px/-6px — half the crosshair's 12px width — is
+   what centers it there) rather than one at every corner */
+.crosshair.foot-left {
+  left: -6px;
+  bottom: 40px;
+}
+
+.crosshair.foot-right {
+  right: -6px;
+  bottom: 40px;
 }
 
 /* small decorative marks riding the vertical rules — a bead on each
