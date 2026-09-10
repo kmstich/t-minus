@@ -333,10 +333,9 @@ const authorColor = (name) => {
 const BRIEF_FIELDS_MIN = 1;
 const BRIEF_FIELDS_MAX = 20;
 
-// icons throughout the app (this file and index.html alike) are
-// plain system symbols/emoji rather than custom vector art — sized
-// via .icon's font-size, colored via currentColor same as before
-const TRASH_ICON = "🗑️";
+// a glyph rather than an emoji — same "×" already used for
+// tag-chip-remove, not the colorful 🗑️ bitmap-style glyph
+const TRASH_ICON = "×";
 
 const briefFieldRow = (value) => {
   const row = document.createElement("div");

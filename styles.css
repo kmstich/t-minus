@@ -334,6 +334,7 @@ textarea {
   background: none;
   cursor: pointer;
   color: var(--ink);
+  font-size: 18px;
   line-height: 1;
   padding: 0;
 }
