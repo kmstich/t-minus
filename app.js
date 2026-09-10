@@ -207,10 +207,19 @@ const el = {
   railBodyVote: $("#rail-body-vote"),
 
   menuModal: $("#menu-modal"),
-  modeInteract: $("#mode-interact"),
+  modePointer: $("#mode-pointer"),
   modeComment: $("#mode-comment"),
+  modeInspect: $("#mode-inspect"),
+  inspectHighlight: $("#inspect-highlight"),
+  inspectLabel: $("#inspect-label"),
   shareReview: $("#share-review"),
   shareReviewLabel: $("#share-review-label"),
+  openSitemap: $("#open-sitemap"),
+  sitemapModal: $("#sitemap-modal"),
+  sitemapClose: $("#sitemap-close"),
+  sitemapCards: $("#sitemap-cards"),
+  sitemapLines: $("#sitemap-lines"),
+  sitemapWrap: $("#sitemap-wrap"),
   newReview: $("#new-review"),
 
   detailsPanel: $("#details-panel"),
@@ -2240,10 +2249,14 @@ const renderWorkspace = () => {
 
 const setMode = (next) => {
   mode = next;
-  el.modeInteract.classList.toggle("is-on", next === "interact");
+  el.modePointer.classList.toggle("is-on", next === "pointer");
   el.modeComment.classList.toggle("is-on", next === "comment");
+  el.modeInspect.classList.toggle("is-on", next === "inspect");
   el.canvas.classList.toggle("is-comment", next === "comment");
+  el.canvas.classList.toggle("is-inspect", next === "inspect");
   if (next !== "comment") closeComposer();
+  if (next !== "inspect") hideInspectHighlight();
+  if (inspectDoc?.body) inspectDoc.body.style.cursor = next === "inspect" ? "crosshair" : "";
 };
 
 /* ---------- prototype frame ----------
@@ -2282,6 +2295,63 @@ el.protoFrame.addEventListener("load", () => {
 el.protoFrame.addEventListener("error", () => {
   el.frameFallback.classList.remove("is-hidden");
 });
+
+/* ---------- inspect mode ----------
+ * A dev-tools-style hover highlight over whatever element in the
+ * prototype the cursor is currently over. Only works for srcdoc-
+ * rendered prototypes — those are same-origin, so contentDocument is
+ * reachable; a manual `url` prototype is cross-origin and silently
+ * gets no highlight rather than erroring.
+ */
+
+const hideInspectHighlight = () => {
+  el.inspectHighlight.classList.add("is-hidden");
+};
+
+const showInspectHighlightFor = (targetEl) => {
+  const frameRect = el.protoFrame.getBoundingClientRect();
+  const elRect = targetEl.getBoundingClientRect();
+  el.inspectHighlight.style.left = `${frameRect.left + elRect.left}px`;
+  el.inspectHighlight.style.top = `${frameRect.top + elRect.top}px`;
+  el.inspectHighlight.style.width = `${elRect.width}px`;
+  el.inspectHighlight.style.height = `${elRect.height}px`;
+  el.inspectLabel.textContent = `${targetEl.tagName.toLowerCase()} · ${Math.round(elRect.width)}×${Math.round(elRect.height)}`;
+  el.inspectHighlight.classList.remove("is-hidden");
+};
+
+let inspectDoc = null;
+
+const onInspectMouseMove = (e) => {
+  if (mode !== "inspect") return;
+  const target = e.target;
+  if (!target || target === inspectDoc.documentElement || target === inspectDoc.body) {
+    hideInspectHighlight();
+    return;
+  }
+  showInspectHighlightFor(target);
+};
+
+// contentDocument is a fresh object every time srcdoc/src changes, so
+// this has to re-attach on every load rather than once at boot
+const wireInspectMode = () => {
+  let doc;
+  try {
+    doc = el.protoFrame.contentDocument;
+  } catch {
+    inspectDoc = null;
+    return;
+  }
+  if (!doc || !doc.body) {
+    inspectDoc = null;
+    return;
+  }
+  inspectDoc = doc;
+  doc.addEventListener("mousemove", onInspectMouseMove);
+  doc.addEventListener("mouseleave", hideInspectHighlight);
+  doc.body.style.cursor = mode === "inspect" ? "crosshair" : "";
+};
+
+el.protoFrame.addEventListener("load", wireInspectMode);
 
 /* ---------- multi-page support ----------
  * Each page is a self-contained resolved surface — {id, label, kind,
@@ -2379,6 +2449,7 @@ const setActivePage = (id) => {
 
 const renderPageTabs = () => {
   el.pageTabs.classList.toggle("is-hidden", state.review.pages.length < 2);
+  el.openSitemap.classList.toggle("is-hidden", state.review.pages.length < 2);
   el.pageTabs.innerHTML = "";
 
   state.review.pages.forEach((p) => {
@@ -2450,6 +2521,102 @@ el.pageAddChooseFile.addEventListener("click", () => {
     renderPins();
   });
 });
+
+/* ---------- site map ----------
+ * Every page as a card, with a line drawn between any two pages where
+ * one's html has an <a href> resolving to the other's own path.
+ * Detected from the already-fetched html strings via DOMParser — no
+ * live iframe involved, so "source"/"url" pages just can't be a link
+ * source (nothing to parse), though they can still be a link target.
+ */
+
+// strips query/hash and a leading "./" or "/" so a same-directory
+// relative href ("checkout.html"), a root-relative one
+// ("/checkout.html"), and the page's own stored path can all be
+// compared on equal footing
+const normalizeHref = (href) => href.split(/[?#]/)[0].replace(/^\.?\/+/, "");
+
+const detectPageLinks = () => {
+  const edges = [];
+  const seen = new Set();
+  state.review.pages.forEach((page) => {
+    if (page.kind !== "html" || !page.html) return;
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(page.html, "text/html");
+    } catch {
+      return;
+    }
+    doc.querySelectorAll("a[href]").forEach((a) => {
+      const href = normalizeHref(a.getAttribute("href") || "");
+      if (!href) return;
+      const target = state.review.pages.find((p) => {
+        if (p.id === page.id) return false;
+        const path = normalizeHref(p.path || "");
+        return path && (path === href || path.endsWith(`/${href}`) || href.endsWith(`/${path}`));
+      });
+      if (!target) return;
+      const key = [page.id, target.id].sort().join("|");
+      if (seen.has(key)) return;
+      seen.add(key);
+      edges.push({ from: page.id, to: target.id });
+    });
+  });
+  return edges;
+};
+
+const renderSitemapLines = (edges) => {
+  el.sitemapLines.querySelectorAll("line").forEach((l) => l.remove());
+  const wrapRect = el.sitemapWrap.getBoundingClientRect();
+
+  edges.forEach(({ from, to }) => {
+    const fromCard = el.sitemapCards.querySelector(`[data-page-id="${from}"]`);
+    const toCard = el.sitemapCards.querySelector(`[data-page-id="${to}"]`);
+    if (!fromCard || !toCard) return;
+    const a = fromCard.getBoundingClientRect();
+    const b = toCard.getBoundingClientRect();
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", a.left + a.width / 2 - wrapRect.left);
+    line.setAttribute("y1", a.top + a.height / 2 - wrapRect.top);
+    line.setAttribute("x2", b.left + b.width / 2 - wrapRect.left);
+    line.setAttribute("y2", b.top + b.height / 2 - wrapRect.top);
+    line.setAttribute("class", "sitemap-line");
+    line.setAttribute("marker-end", "url(#sitemap-arrow)");
+    el.sitemapLines.appendChild(line);
+  });
+};
+
+const closeSitemapModal = () => {
+  el.sitemapModal.classList.add("is-hidden");
+  hideCatcher();
+};
+
+const openSitemapModal = () => {
+  closeMenu();
+  el.sitemapCards.innerHTML = "";
+  state.review.pages.forEach((p) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "sitemap-card";
+    card.dataset.pageId = p.id;
+    card.textContent = p.label || "Page";
+    card.addEventListener("click", () => {
+      setActivePage(p.id);
+      closeSitemapModal();
+    });
+    el.sitemapCards.appendChild(card);
+  });
+
+  el.sitemapModal.classList.remove("is-hidden");
+  showCatcher(closeSitemapModal, "workspace");
+  // wait a frame so the cards just added actually have layout before
+  // measuring them for the connector lines
+  requestAnimationFrame(() => renderSitemapLines(detectPageLinks()));
+};
+
+el.openSitemap.addEventListener("click", openSitemapModal);
+el.sitemapClose.addEventListener("click", closeSitemapModal);
 
 const renderPrototypeSurface = () => {
   el.frameFallback.classList.add("is-hidden");
@@ -2530,8 +2697,9 @@ const resetToWizard = () => {
   renderStep();
 };
 
-el.modeInteract.addEventListener("click", () => setMode("interact"));
+el.modePointer.addEventListener("click", () => setMode("pointer"));
 el.modeComment.addEventListener("click", () => setMode("comment"));
+el.modeInspect.addEventListener("click", () => setMode("inspect"));
 
 /* ---------- collapsible rail sections ----------
  * The floating comment rail's two pieces (Comments, Ready to go?)
@@ -2822,7 +2990,7 @@ el.inTzero.value = toDateInput(state.review.tzero);
 initBriefFields(el.briefChecklist, el.addBriefField, state.review.briefAreas);
 initBriefFields(el.editBriefChecklist, el.editAddBriefField, []);
 
-setMode("interact");
+setMode("pointer");
 
 if (state.created) {
   openWorkspace();

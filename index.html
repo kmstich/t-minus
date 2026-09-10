@@ -282,14 +282,25 @@
 
         <!-- MODE TOOLBAR -->
         <div class="segmented mode-toolbar" id="mode-toolbar" role="group" aria-label="Review mode">
-          <button type="button" class="segmented-btn is-on" id="mode-interact" aria-label="Inspect">
-            🔍
-            <span>Inspect</span>
+          <button type="button" class="segmented-btn is-on" id="mode-pointer" aria-label="Pointer">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 4 7.07 17 2.51-7.39L21 11.07Z" /></svg>
+            <span>Pointer</span>
           </button>
           <button type="button" class="segmented-btn" id="mode-comment" aria-label="Comment">
-            💬
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             <span>Comment</span>
           </button>
+          <button type="button" class="segmented-btn" id="mode-inspect" aria-label="Inspect">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+            <span>Inspect</span>
+          </button>
+        </div>
+
+        <!-- inspect-mode hover highlight — positioned in parent-page
+             coordinates from the hovered element's rect inside the
+             (same-origin) prototype iframe; see wireInspectMode() -->
+        <div class="inspect-highlight is-hidden" id="inspect-highlight" aria-hidden="true">
+          <span class="inspect-label" id="inspect-label"></span>
         </div>
       </div>
 
@@ -335,6 +346,10 @@
         <button type="button" class="menu-item" id="share-review" role="menuitem">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
           <span id="share-review-label">Share</span>
+        </button>
+        <button type="button" class="menu-item is-hidden" id="open-sitemap" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="16" y="16" width="6" height="6" rx="1" /><rect x="2" y="16" width="6" height="6" rx="1" /><rect x="9" y="2" width="6" height="6" rx="1" /><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3" /><path d="M12 12V8" /></svg>
+          <span>Site map</span>
         </button>
         <button type="button" class="menu-item" id="new-review" role="menuitem">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M12 18v-6" /><path d="M9 15h6" /></svg>
@@ -559,6 +574,29 @@
       </label>
       <button type="button" class="btn btn-solid" id="page-add-choose-file">Choose file…</button>
       <p class="micro" id="page-add-status"></p>
+    </div>
+
+    <!-- SITE MAP — every page as a card, with lines drawn between any
+         two pages where one's html has an <a href> pointing at the
+         other's resolved path (see detectPageLinks() in app.js) -->
+    <div class="modal sitemap-modal is-hidden" id="sitemap-modal">
+      <div class="modal-head">
+        <span class="micro">Site map</span>
+        <button type="button" class="icon-close-btn" id="sitemap-close" aria-label="Close">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+        </button>
+      </div>
+      <p class="micro sitemap-hint">Pages, and the links detected between them. Click a page to jump to it.</p>
+      <div class="sitemap-wrap" id="sitemap-wrap">
+        <svg class="sitemap-lines" id="sitemap-lines">
+          <defs>
+            <marker id="sitemap-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path class="sitemap-arrowhead" d="M0 0 L10 5 L0 10 z" />
+            </marker>
+          </defs>
+        </svg>
+        <div class="sitemap-cards" id="sitemap-cards"></div>
+      </div>
     </div>
 
     <template id="tpl-thread">

@@ -772,6 +772,10 @@ textarea::placeholder {
   pointer-events: auto;
 }
 
+.canvas.is-inspect {
+  cursor: crosshair;
+}
+
 .pin-layer {
   position: absolute;
   inset: 0;
@@ -1457,6 +1461,69 @@ button.tag-chip {
   padding-bottom: var(--sp-3);
 }
 
+/* SITE MAP — wider than the default 320px modal, since it needs room
+   to lay out more than one page card side by side */
+.sitemap-modal {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 640px;
+  max-width: calc(100vw - var(--sp-8));
+}
+
+.sitemap-hint {
+  color: var(--ink-2);
+  margin-bottom: var(--sp-4);
+}
+
+.sitemap-wrap {
+  position: relative;
+}
+
+.sitemap-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.sitemap-line {
+  stroke: var(--line-2);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.sitemap-arrowhead {
+  fill: var(--line-2);
+}
+
+.sitemap-cards {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6) var(--sp-8);
+  padding: var(--sp-4) 0;
+}
+
+.sitemap-card {
+  border: 1px solid var(--ink);
+  background: rgba(241, 241, 241, 0.82);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ink);
+  min-width: 120px;
+  text-align: center;
+}
+
+.sitemap-card:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
 /* the one close/header-icon button used everywhere a modal needs to
    be dismissed (or, for the thread modal's ⋯ and resolve, needs a
    same-sized sibling next to it) — a plain icon that fills into a
@@ -1851,6 +1918,30 @@ button.tag-chip {
   z-index: 4;
   border: 0;
   box-shadow: 0 8px 24px rgba(var(--ink-rgb), 0.12);
+}
+
+/* inspect-mode hover highlight — a dev-tools-style blue box over
+   whatever element in the prototype the cursor is currently over,
+   positioned in JS (see wireInspectMode() in app.js) */
+.inspect-highlight {
+  position: fixed;
+  z-index: 3;
+  pointer-events: none;
+  border: 1px solid var(--blue);
+  background: rgba(0, 107, 239, 0.1);
+}
+
+.inspect-label {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--blue);
+  color: var(--white);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* vote toggle: same segmented control, stretched to the sidebar's
