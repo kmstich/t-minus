@@ -147,6 +147,7 @@ textarea {
   padding: var(--sp-4) 160px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .wordmark {
@@ -155,6 +156,15 @@ textarea {
   letter-spacing: -0.02em;
   font-weight: 700;
   color: var(--ink);
+}
+
+/* technical-drawing-style metadata tag, same restrained micro-copy
+   language as the rest of the app's decorative chrome */
+.masthead-date {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
 }
 
 /* WIZARD */
@@ -653,6 +663,17 @@ textarea::placeholder {
 .crosshair.foot-right {
   right: -6px;
   bottom: 40px;
+}
+
+/* stacked pair near the top of the right line, below the masthead */
+.crosshair.head-right-1 {
+  right: -6px;
+  top: 32px;
+}
+
+.crosshair.head-right-2 {
+  right: -6px;
+  top: 72px;
 }
 
 /* small decorative marks riding the vertical rules — a bead on each

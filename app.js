@@ -133,6 +133,7 @@ const save = () => localStorage.setItem(KEY_STATE, JSON.stringify(state));
 const $ = (sel) => document.querySelector(sel);
 
 const el = {
+  mastheadDate: $("#masthead-date"),
   stepIndex: $("#step-index"),
   stepTitle: $("#step-title"),
   stepLede: $("#step-lede"),
@@ -2815,6 +2816,8 @@ el.composerEmojiToggle.addEventListener("click", () => {
 });
 
 /* ---------- boot ---------- */
+
+el.mastheadDate.textContent = `// ${shortDate(new Date()).toUpperCase()}`;
 
 el.inCreatorName.value = state.creator.name;
 el.inCreatorEmail.value = state.creator.email;
