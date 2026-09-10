@@ -176,7 +176,7 @@ textarea {
 .wizard {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 72px 160px 80px;
+  padding: 192px 160px 80px;
 }
 
 /* the content column (heading, form, actions) is centered as a block
@@ -1984,7 +1984,7 @@ button.tag-chip {
 
 @media (max-width: 900px) {
   .wizard {
-    padding: 52px var(--sp-6) var(--sp-10);
+    padding: 172px var(--sp-6) var(--sp-10);
   }
 
   .wizard-head h1 {
