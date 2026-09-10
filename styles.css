@@ -179,8 +179,12 @@ textarea {
   padding: 60px 160px 80px;
 }
 
+/* the content column (heading, form, actions) is centered as a block
+   within the wizard's available width — not text-align:center, just
+   not left-anchored with a big empty gap on the right */
 .wizard-head {
   max-width: 883px;
+  margin: 0 auto;
 }
 
 /* step index — 12px / weight 500 / #666, per spec (not the bold
@@ -257,6 +261,7 @@ textarea {
 .step {
   display: none;
   max-width: 720px;
+  margin: 0 auto;
 }
 
 .step.is-active {
@@ -514,7 +519,7 @@ textarea::placeholder {
 .wizard-actions {
   display: flex;
   gap: var(--sp-3);
-  margin-top: var(--sp-6);
+  margin: var(--sp-6) auto 0;
   max-width: 720px;
 }
 
