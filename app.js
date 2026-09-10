@@ -64,6 +64,13 @@ const blankState = () => ({
     brief: "",
     briefAreas: [],
     slug: "",
+    // multi-page support: each page carries its own resolved
+    // file/URL, same shape as the top-level resolved* fields above
+    // (which stay in place for the wizard's single-file flow and get
+    // folded into pages[0] the first time the workspace opens — see
+    // ensurePages()). Comments reference a page by id.
+    pages: [],
+    activePageId: "",
   },
   comments: [],
   votes: {},
@@ -168,6 +175,13 @@ const el = {
   screenWorkspace: $("#screen-workspace"),
 
   canvas: $("#canvas"),
+  stage: $("#stage"),
+  pageTabs: $("#page-tabs"),
+  pageAddModal: $("#page-add-modal"),
+  pageAddClose: $("#page-add-close"),
+  pageAddLabel: $("#page-add-label"),
+  pageAddChooseFile: $("#page-add-choose-file"),
+  pageAddStatus: $("#page-add-status"),
   protoFrame: $("#proto-frame"),
   overlay: $("#overlay"),
   pinLayer: $("#pin-layer"),
@@ -190,6 +204,8 @@ const el = {
   menuModal: $("#menu-modal"),
   modeInteract: $("#mode-interact"),
   modeComment: $("#mode-comment"),
+  shareReview: $("#share-review"),
+  shareReviewLabel: $("#share-review-label"),
   newReview: $("#new-review"),
 
   detailsPanel: $("#details-panel"),
@@ -1172,6 +1188,10 @@ const runSync = async () => {
           brief: state.review.brief,
           briefAreas: state.review.briefAreas,
           url: state.review.url,
+          // metadata only, same reasoning as the comment above — a
+          // page's html/source gets re-resolved live from its path,
+          // never carried through the synced snapshot itself
+          pages: state.review.pages.map((p) => ({ id: p.id, label: p.label, kind: p.kind, path: p.path, url: p.url })),
         },
         comments: state.comments,
         votes: state.votes,
@@ -1301,6 +1321,18 @@ const pullRemoteComments = async () => {
 
   state.comments = mergeComments(state.comments, snapshot.comments || []);
   state.votes = { ...(snapshot.votes || {}), ...state.votes };
+
+  // a page someone else added shows up here as metadata only — fetch
+  // its content and adopt it, but never touch a page this browser
+  // already has (its own resolution is at least as fresh)
+  const knownIds = new Set(state.review.pages.map((p) => p.id));
+  const newPageMetas = (snapshot.reviewConfig?.pages || []).filter((p) => !knownIds.has(p.id));
+  if (newPageMetas.length) {
+    const newPages = await Promise.all(newPageMetas.map((p) => fetchPageContent(parsed.owner, parsed.repo, p, githubToken)));
+    state.review.pages.push(...newPages);
+    renderPageTabs();
+  }
+
   save();
   renderWorkspace();
   if (openThreadId) renderThreadModal();
@@ -1384,6 +1416,19 @@ const joinExistingReview = async (snap) => {
   state.created = true;
   save();
   openWorkspace();
+
+  // page 1 is already resolved above (same as any single-page review);
+  // any further pages in the synced snapshot are metadata only, fetched
+  // and appended after the workspace is already open and usable
+  if (cfg.pages?.length > 1) {
+    const parsed = parseGithubRepo(repo);
+    const extra = await Promise.all(
+      cfg.pages.slice(1).map((p) => fetchPageContent(parsed.owner, parsed.repo, p, githubToken)),
+    );
+    state.review.pages.push(...extra);
+    save();
+    renderPageTabs();
+  }
 };
 
 el.existingReviewClose.addEventListener("click", closeExistingReviewModal);
@@ -1426,6 +1471,7 @@ const applyResolveResult = (result) => {
     state.review.resolvedSource = result.kind === "source" ? result.source : "";
   }
   save();
+  syncPageOneFromResolved();
 };
 
 const renderResolveStatus = () => {
@@ -1706,8 +1752,11 @@ const PIN_COLLISION_STEP = 0.02;
 const dedupeAnchor = (x, y) => {
   let ax = x;
   let ay = y;
+  // only comments on the same page can visually overlap — a pin on
+  // another page sharing this x/y is no coincidence worth nudging
+  const onThisPage = state.comments.filter((c) => commentPageId(c) === state.review.activePageId);
   for (let i = 0; i < 25; i += 1) {
-    const collides = state.comments.some((c) => Math.abs(c.x - ax) < PIN_COLLISION_EPS && Math.abs(c.y - ay) < PIN_COLLISION_EPS);
+    const collides = onThisPage.some((c) => Math.abs(c.x - ax) < PIN_COLLISION_EPS && Math.abs(c.y - ay) < PIN_COLLISION_EPS);
     if (!collides) break;
     ax = Math.min(0.97, x + (i + 1) * PIN_COLLISION_STEP);
     ay = Math.min(0.97, y + (i + 1) * PIN_COLLISION_STEP);
@@ -1775,7 +1824,7 @@ const startPinDrag = (e, dot, comment) => {
   pinDrag = {
     dot,
     comment,
-    rect: el.canvas.getBoundingClientRect(),
+    rect: el.stage.getBoundingClientRect(),
     startX: e.clientX,
     startY: e.clientY,
     moved: false,
@@ -1786,7 +1835,9 @@ const startPinDrag = (e, dot, comment) => {
 
 const renderPins = () => {
   el.pinLayer.innerHTML = "";
-  visible().forEach((c) => {
+  visible()
+    .filter((c) => commentPageId(c) === state.review.activePageId)
+    .forEach((c) => {
     const dot = document.createElement("button");
     dot.type = "button";
     dot.className = `pin-dot${isBlocker(c) ? " is-blocker" : ""}`;
@@ -1878,13 +1929,25 @@ const renderThreads = () => {
     avatar.textContent = c.author.charAt(0).toUpperCase();
 
     node.querySelector(".thread-author").textContent = c.author;
-    node.querySelector(".thread-meta").textContent = c.resolved
-      ? `${relativeTime(c.createdAt)} · resolved`
-      : relativeTime(c.createdAt);
+    // only worth naming which page a comment lives on once there's
+    // more than one — a single-page review has nothing to disambiguate
+    const pageLabel =
+      state.review.pages.length > 1
+        ? state.review.pages.find((p) => p.id === commentPageId(c))?.label
+        : null;
+    const metaBits = [c.resolved ? "resolved" : null, pageLabel].filter(Boolean);
+    node.querySelector(".thread-meta").textContent = [relativeTime(c.createdAt), ...metaBits].join(" · ");
     node.querySelector(".thread-body").textContent = c.body;
     renderTagList(node.querySelector(".thread-tags"), c.tags);
 
-    article.addEventListener("click", () => openThreadModal(c.id));
+    // clicking a comment left on a different page switches the canvas
+    // to that page first, so the thread modal opens somewhere its pin
+    // actually makes sense on
+    article.addEventListener("click", () => {
+      const pageId = commentPageId(c);
+      if (pageId !== state.review.activePageId) setActivePage(pageId);
+      openThreadModal(c.id);
+    });
 
     el.threads.appendChild(node);
   });
@@ -2179,6 +2242,30 @@ const setMode = (next) => {
   if (next !== "comment") closeComposer();
 };
 
+/* ---------- stage scaling ----------
+ * The stage is a fixed-size artboard (matches .stage in styles.css)
+ * that's scaled as a whole to fit whatever room the canvas actually
+ * has. Scaling never reflows the page inside it — only the outer
+ * canvas' width/height changes reflow a responsive prototype — so
+ * this is what keeps a pin's fractional x/y anchored to the same
+ * visual spot on the prototype regardless of window size, sidebar
+ * width, etc. Recomputed on every canvas resize via ResizeObserver.
+ */
+
+const STAGE_WIDTH = 1440;
+const STAGE_HEIGHT = 900;
+
+const fitStage = () => {
+  const canvasRect = el.canvas.getBoundingClientRect();
+  if (!canvasRect.width || !canvasRect.height) return;
+  const scale = Math.min(canvasRect.width / STAGE_WIDTH, canvasRect.height / STAGE_HEIGHT);
+  const left = (canvasRect.width - STAGE_WIDTH * scale) / 2;
+  const top = (canvasRect.height - STAGE_HEIGHT * scale) / 2;
+  el.stage.style.transform = `translate(${left}px, ${top}px) scale(${scale})`;
+};
+
+new ResizeObserver(fitStage).observe(el.canvas);
+
 /* ---------- prototype frame ---------- */
 
 let frameLoaded = false;
@@ -2209,27 +2296,188 @@ el.protoFrame.addEventListener("error", () => {
   el.frameFallback.classList.remove("is-hidden");
 });
 
+/* ---------- multi-page support ----------
+ * Each page is a self-contained resolved surface — {id, label, kind,
+ * path, html, source, url}, the same shape the wizard's single-file
+ * flow already produces via the flat state.review.resolved-/url
+ * fields. The first time the workspace opens, ensurePages() folds
+ * those flat fields into pages[0] so existing reviews (and the
+ * wizard itself) keep working unchanged; the flat fields stay in
+ * place after that only as what Details-panel re-resolution writes
+ * to (kept in sync onto pages[0] specifically — Details edits the
+ * original page, additional pages are managed from the page tabs).
+ *
+ * Comments carry a pageId. The sidebar lists every comment regardless
+ * of page (commentPageId() also covers comments from before this
+ * feature, which have no pageId at all); the canvas only ever renders
+ * pins whose page matches the active tab.
+ */
+
+const PAGES_MAX = 8;
+
+const activePage = () =>
+  state.review.pages.find((p) => p.id === state.review.activePageId) || state.review.pages[0];
+
+const commentPageId = (c) => c.pageId || state.review.pages[0]?.id;
+
+const ensurePages = () => {
+  if (!state.review.pages.length) {
+    state.review.pages = [
+      {
+        id: crypto.randomUUID(),
+        label: state.review.title || "Page 1",
+        kind: state.review.resolvedKind,
+        path: state.review.resolvedPath,
+        html: state.review.resolvedHtml,
+        source: state.review.resolvedSource,
+        url: state.review.url,
+      },
+    ];
+  }
+  if (!activePage()) state.review.activePageId = state.review.pages[0].id;
+  state.comments.forEach((c) => {
+    if (!c.pageId) c.pageId = commentPageId(c);
+  });
+  save();
+};
+
+// Details-panel re-resolution (and its live-URL field) still write to
+// the flat state.review.resolved*/url fields — this keeps page 1
+// in step with those so the canvas actually reflects the change
+const syncPageOneFromResolved = () => {
+  if (!state.review.pages.length) return;
+  const p0 = state.review.pages[0];
+  p0.kind = state.review.resolvedKind;
+  p0.path = state.review.resolvedPath;
+  p0.html = state.review.resolvedHtml;
+  p0.source = state.review.resolvedSource;
+  p0.url = state.review.url;
+  save();
+};
+
+// a synced page carries only metadata (id/label/kind/path/url), same
+// as the review's own primary file — this re-resolves the actual
+// html/source content from the repo, live, same as joining a review
+// already does for page 1
+const fetchPageContent = async (owner, repo, pageMeta, token) => {
+  if (pageMeta.url || !pageMeta.path) {
+    return { ...pageMeta, kind: pageMeta.url ? pageMeta.kind : null, html: "", source: "" };
+  }
+  const result = await fetchResolvedFile(owner, repo, { kind: pageMeta.kind, path: pageMeta.path }, token);
+  if (result.error) return { ...pageMeta, kind: null, html: "", source: "" };
+  return {
+    ...pageMeta,
+    kind: result.kind,
+    html: result.kind === "html" ? result.html : "",
+    source: result.kind === "source" ? result.source : "",
+  };
+};
+
+const setActivePage = (id) => {
+  if (id === state.review.activePageId) return;
+  state.review.activePageId = id;
+  save();
+  renderPageTabs();
+  renderPrototypeSurface();
+  renderPins();
+};
+
+const renderPageTabs = () => {
+  el.pageTabs.classList.toggle("is-hidden", state.review.pages.length < 2);
+  el.pageTabs.innerHTML = "";
+
+  state.review.pages.forEach((p) => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = `page-tab${p.id === state.review.activePageId ? " is-on" : ""}`;
+    tab.textContent = p.label || "Page";
+    tab.title = p.label || "Page";
+    tab.addEventListener("click", () => setActivePage(p.id));
+    el.pageTabs.appendChild(tab);
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "page-tab-add";
+  addBtn.setAttribute("aria-label", "Add page");
+  addBtn.disabled = state.review.pages.length >= PAGES_MAX;
+  addBtn.textContent = "+";
+  addBtn.addEventListener("click", openPageAddModal);
+  el.pageTabs.appendChild(addBtn);
+};
+
+const closePageAddModal = () => {
+  el.pageAddModal.classList.add("is-hidden");
+  hideCatcher();
+};
+
+const openPageAddModal = () => {
+  if (state.review.pages.length >= PAGES_MAX) return;
+  el.pageAddLabel.value = "";
+  el.pageAddStatus.textContent = "";
+  el.pageAddModal.classList.remove("is-hidden");
+  showCatcher(closePageAddModal, "workspace");
+};
+
+el.pageAddClose.addEventListener("click", closePageAddModal);
+
+el.pageAddChooseFile.addEventListener("click", () => {
+  const repo = state.review.repo;
+  if (!repo) {
+    el.pageAddStatus.textContent = "No repository connected.";
+    return;
+  }
+  openFilePicker(repo, async (path) => {
+    closeFilePicker();
+    el.pageAddStatus.textContent = "Loading…";
+    const parsed = parseGithubRepo(repo);
+    const result = await resolveManualFile(parsed.owner, parsed.repo, path, githubToken);
+    if (result.error) {
+      el.pageAddStatus.textContent = result.error;
+      return;
+    }
+    const page = {
+      id: crypto.randomUUID(),
+      label: el.pageAddLabel.value.trim() || result.path,
+      kind: result.kind,
+      path: result.path,
+      html: result.kind === "html" ? result.html : "",
+      source: result.kind === "source" ? result.source : "",
+      url: "",
+    };
+    state.review.pages.push(page);
+    state.review.activePageId = page.id;
+    save();
+    scheduleSync();
+    closePageAddModal();
+    renderPageTabs();
+    renderPrototypeSurface();
+    renderPins();
+  });
+});
+
 const renderPrototypeSurface = () => {
   el.frameFallback.classList.add("is-hidden");
   el.sourceView.classList.add("is-hidden");
   el.protoFrame.classList.remove("is-hidden");
 
-  const manualUrl = state.review.url;
+  const page = activePage();
+  const manualUrl = page.url;
 
   if (manualUrl) {
     loadPrototype(manualUrl);
     return;
   }
 
-  if (state.review.resolvedKind === "html") {
+  if (page.kind === "html") {
     el.protoFrame.removeAttribute("src");
-    el.protoFrame.srcdoc = state.review.resolvedHtml;
+    el.protoFrame.srcdoc = page.html;
     return;
   }
 
-  if (state.review.resolvedKind === "source") {
+  if (page.kind === "source") {
     el.protoFrame.classList.add("is-hidden");
-    el.sourceCode.textContent = state.review.resolvedSource;
+    el.sourceCode.textContent = page.source;
     el.sourceView.classList.remove("is-hidden");
     return;
   }
@@ -2254,6 +2502,9 @@ const openThreadFromHash = () => {
 const openWorkspace = () => {
   el.screenOnboarding.classList.add("is-hidden");
   el.screenWorkspace.classList.remove("is-hidden");
+  ensurePages();
+  renderPageTabs();
+  fitStage();
   renderWorkspace();
   renderPrototypeSurface();
   updateSyncUI();
@@ -2305,6 +2556,26 @@ el.hamburgerBtn.addEventListener("click", (e) => {
     closeMenu();
   }
 });
+// copies the review's own URL (no comment hash) so a teammate landing
+// on it just sees the workspace as it stands, same as the thread
+// modal's "Copy comment link" but for the whole review rather than
+// one thread
+el.shareReview.addEventListener("click", async () => {
+  const url = `${location.origin}${location.pathname}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    el.shareReviewLabel.textContent = "Copied!";
+  } catch {
+    el.shareReviewLabel.textContent = "Couldn't copy";
+  }
+  // leave the menu open just long enough to show the label flip back,
+  // rather than closing before there's anything to see
+  window.setTimeout(() => {
+    el.shareReviewLabel.textContent = "Share";
+    closeMenu();
+  }, 1200);
+});
+
 el.newReview.addEventListener("click", () => {
   closeMenu();
   resetToWizard();
@@ -2419,6 +2690,7 @@ el.detailsEdit.addEventListener("submit", async (e) => {
   state.review.brief = formatBrief(briefAreas);
   state.review.slug = slugify(title);
   save();
+  syncPageOneFromResolved();
 
   renderWorkspace();
   if (surfaceChanged) renderPrototypeSurface();
@@ -2447,7 +2719,7 @@ el.overlay.addEventListener("click", (e) => {
   if (mode !== "comment" || !state.creator.name) return;
   if (e.target.classList.contains("pin-dot")) return;
 
-  const rect = el.canvas.getBoundingClientRect();
+  const rect = el.stage.getBoundingClientRect();
   anchor = {
     x: (e.clientX - rect.left) / rect.width,
     y: (e.clientY - rect.top) / rect.height,
@@ -2457,7 +2729,9 @@ el.overlay.addEventListener("click", (e) => {
   el.composerAvatar.textContent = (state.creator.name || "T").charAt(0).toUpperCase();
   el.composer.classList.remove("is-hidden");
   positionComposerAt(e.clientX, e.clientY);
-  el.commentBody.focus();
+  // no auto-focus here: the pill should open collapsed (placeholder +
+  // send only) and expand — revealing the close/emoji buttons — only
+  // once the reviewer actually clicks into it
 });
 
 el.composer.addEventListener("submit", (e) => {
@@ -2476,6 +2750,7 @@ el.composer.addEventListener("submit", (e) => {
     createdAt: now,
     updatedAt: now,
     replies: [],
+    pageId: state.review.activePageId,
     ...dedupeAnchor(anchor.x, anchor.y),
   });
 

@@ -204,16 +204,22 @@
     <!-- WORKSPACE -->
     <main class="workspace is-hidden" id="screen-workspace">
       <div class="canvas" id="canvas">
-        <iframe
-          id="proto-frame"
-          class="proto-frame"
-          title="Prototype under review"
-          referrerpolicy="no-referrer"
-        ></iframe>
+        <!-- fixed-size stage, scaled as one unit to fit the canvas (see
+             fitStage() in app.js) so the prototype never reflows on
+             window resize — only zooms — keeping every pin's
+             fractional anchor pointed at the same spot on the page -->
+        <div class="stage" id="stage">
+          <iframe
+            id="proto-frame"
+            class="proto-frame"
+            title="Prototype under review"
+            referrerpolicy="no-referrer"
+          ></iframe>
 
-        <div class="overlay" id="overlay">
-          <div class="pin-layer" id="pin-layer"></div>
-          <div class="pin-preview is-hidden" id="pin-preview"></div>
+          <div class="overlay" id="overlay">
+            <div class="pin-layer" id="pin-layer"></div>
+            <div class="pin-preview is-hidden" id="pin-preview"></div>
+          </div>
         </div>
 
         <pre class="source-view is-hidden" id="source-view"><code id="source-code"></code></pre>
@@ -234,6 +240,11 @@
           <span class="canvas-brand">T-Minus</span>
           <span class="canvas-countdown" id="countdown">00:00:00</span>
         </div>
+
+        <!-- page tabs — only shown once a review has more than one
+             page; comments stay tied to whichever page they were left
+             on, pins on the canvas only ever show the active one -->
+        <div class="page-tabs is-hidden" id="page-tabs"></div>
 
         <!-- MODE TOOLBAR -->
         <div class="segmented mode-toolbar" id="mode-toolbar" role="group" aria-label="Review mode">
@@ -279,6 +290,10 @@
 
       <!-- HAMBURGER MENU (macOS-style dropdown, left-aligned) -->
       <div class="menu-modal is-hidden" id="menu-modal" role="menu">
+        <button type="button" class="menu-item" id="share-review" role="menuitem">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
+          <span id="share-review-label">Share</span>
+        </button>
         <button type="button" class="menu-item" id="new-review" role="menuitem">Start a new review</button>
       </div>
 
@@ -346,14 +361,13 @@
       </div>
 
       <!-- COMMENT COMPOSER MODAL -->
-      <form class="modal composer is-hidden" id="composer">
-        <button type="button" class="icon-close-btn composer-close" id="composer-close" aria-label="Close">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-        </button>
-
+      <form class="composer is-hidden" id="composer">
         <div class="comment-input-row">
           <span class="avatar" id="composer-avatar"></span>
           <div class="comment-input-box">
+            <button type="button" class="icon-close-btn composer-close" id="composer-close" aria-label="Close">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+            </button>
             <textarea id="comment-body" rows="1" placeholder="Add a comment"></textarea>
             <div class="comment-input-actions">
               <button type="button" class="emoji-toggle-btn" id="composer-emoji-toggle" aria-label="Insert emoji">
@@ -482,6 +496,24 @@
         </button>
       </div>
       <div class="file-picker-list" id="file-picker-list"></div>
+    </div>
+
+    <!-- ADD PAGE MODAL — names a new page and points it at a file in
+         the same repo, reusing the existing file picker rather than a
+         separate lookup flow -->
+    <div class="modal is-hidden" id="page-add-modal">
+      <div class="modal-head">
+        <span class="micro">Add page</span>
+        <button type="button" class="icon-close-btn" id="page-add-close" aria-label="Close">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+        </button>
+      </div>
+      <label class="field">
+        <span class="micro">Page name</span>
+        <input id="page-add-label" type="text" maxlength="40" placeholder="e.g. Checkout" />
+      </label>
+      <button type="button" class="btn btn-solid" id="page-add-choose-file">Choose file…</button>
+      <p class="micro" id="page-add-status"></p>
     </div>
 
     <template id="tpl-thread">

@@ -511,6 +511,23 @@ textarea::placeholder {
   overflow: hidden;
 }
 
+/* fixed intrinsic size (see STAGE_WIDTH/STAGE_HEIGHT in app.js) — the
+   prototype always renders at this exact viewport, then the whole
+   stage is scaled as one unit by fitStage() to fill the available
+   canvas. Because scaling never reflows the page underneath, a pin's
+   fractional x/y always lands on the same spot regardless of window
+   size — only a real content change moves it. */
+.stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1440px;
+  height: 900px;
+  background: var(--white);
+  overflow: hidden;
+  transform-origin: top left;
+}
+
 .proto-frame {
   position: absolute;
   inset: 0;
@@ -566,6 +583,71 @@ textarea::placeholder {
   gap: var(--sp-3);
 }
 
+/* PAGE TABS — switches which page's pins render on the canvas; the
+   sidebar always lists comments from every page regardless of which
+   tab is active (see renderThreads()/renderPins() in app.js) */
+.page-tabs {
+  position: absolute;
+  top: var(--sp-4);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-btn);
+  box-shadow: 0 8px 24px rgba(var(--ink-rgb), 0.16);
+}
+
+.page-tab {
+  border: 0;
+  background: none;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-btn);
+  font-size: var(--fs-micro);
+  color: var(--ink-2);
+  cursor: pointer;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-tab:hover {
+  color: var(--ink);
+}
+
+.page-tab.is-on {
+  background: var(--ink);
+  color: var(--white);
+}
+
+.page-tab-add {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-size: var(--fs-body);
+  line-height: 1;
+}
+
+.page-tab-add:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
 .canvas-brand {
   font-size: var(--fs-small);
   font-weight: 700;
@@ -616,16 +698,17 @@ textarea::placeholder {
 
 /* PIN MARKERS on canvas — colored per author, small tail dot pointing
    at the exact anchor coordinate */
+/* 20% larger than the original 24px, snapped to the 4px grid */
 .pin-dot {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--white);
   background: var(--pin-color, var(--ink));
@@ -638,12 +721,12 @@ textarea::placeholder {
 .pin-dot::after {
   content: "";
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--pin-color, var(--ink));
-  right: -2px;
-  bottom: -2px;
+  right: -4px;
+  bottom: -4px;
 }
 
 .pin-dot.is-blocker {
@@ -1241,10 +1324,16 @@ button.tag-chip {
   color: var(--blue);
 }
 
-/* composer is positioned in JS so its top-right corner lands on the
-   canvas point that was clicked, not centered like the other modals */
+/* composer is NOT a .modal card — the comment-input-box pill below is
+   its only visible surface. This just positions the form itself (JS
+   sets top/right so the pill's top-right corner lands on the canvas
+   point that was clicked, not centered like the other modals). */
 .composer {
+  position: fixed;
+  z-index: 7;
   left: auto;
+  width: 320px;
+  max-width: calc(100vw - var(--sp-8));
 }
 
 .click-catcher {
@@ -1272,7 +1361,9 @@ button.tag-chip {
 }
 
 .menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   width: 100%;
   text-align: left;
   padding: var(--sp-2) var(--sp-4);
@@ -1281,6 +1372,10 @@ button.tag-chip {
   cursor: pointer;
   font-size: var(--fs-body);
   color: var(--ink);
+}
+
+.menu-item .icon {
+  color: var(--ink-2);
 }
 
 .menu-item:hover {
@@ -1299,11 +1394,10 @@ button.tag-chip {
   margin: var(--sp-3) 0;
 }
 
-/* comment + new-comment modals: frosted glass with no border, a
-   divider under the header only (never at the bottom — the reply
-   row is the last thing in the modal, not set off from anything) */
-.thread-modal,
-.composer {
+/* comment modal: frosted glass with no border, a divider under the
+   header only (never at the bottom — the reply row is the last thing
+   in the modal, not set off from anything) */
+.thread-modal {
   border: 0;
 }
 
@@ -1312,17 +1406,18 @@ button.tag-chip {
   padding-bottom: var(--sp-3);
 }
 
-/* composer has no header row at all (see the HTML comment on
-   #composer-close) — its close button floats over the top-right
-   corner instead */
-.composer {
-  padding-top: var(--sp-9);
-}
-
+/* composer's close button lives inside the pill itself (see
+   .comment-input-box below) and only appears once expanded, same as
+   the emoji button — collapsed, the pill is the whole UI */
 .composer-close {
   position: absolute;
-  top: var(--sp-3);
-  right: var(--sp-3);
+  top: var(--sp-2);
+  right: var(--sp-2);
+  display: none;
+}
+
+.comment-input-box:focus-within .composer-close {
+  display: inline-flex;
 }
 
 .modal-head-actions {
@@ -1352,6 +1447,12 @@ button.tag-chip {
   margin-top: var(--sp-3);
 }
 
+/* the composer's row is the entire form, not stacked under tags or a
+   header the way the thread-modal reply row is — no top margin needed */
+.composer .comment-input-row {
+  margin-top: 0;
+}
+
 .comment-input-row .avatar {
   width: 32px;
   height: 32px;
@@ -1360,6 +1461,7 @@ button.tag-chip {
 }
 
 .comment-input-box {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -1374,6 +1476,17 @@ button.tag-chip {
   border-radius: var(--radius-btn);
   border-color: var(--blue);
   box-shadow: 0 0 0 1px var(--blue);
+}
+
+/* the composer has no surrounding .modal card, so its pill carries
+   the frosted-glass surface itself — the thread-modal's reply pill
+   already sits inside that card's own frosted background, so it
+   stays plain */
+.composer .comment-input-box {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 20px 48px rgba(var(--ink-rgb), 0.16);
 }
 
 .comment-input-box textarea {
@@ -1391,6 +1504,22 @@ button.tag-chip {
 
 .comment-input-box:focus-within textarea {
   padding: var(--sp-3) var(--sp-4);
+}
+
+/* room for the close button once it appears in the top-right corner */
+.composer .comment-input-box:focus-within textarea {
+  padding-right: var(--sp-8);
+}
+
+/* collapsed, the pill is just placeholder text + send — emoji only
+   appears once the field is expanded, so a one-line "Add a comment"
+   isn't cluttered with a control that has nowhere useful to act yet */
+.composer .emoji-toggle-btn {
+  display: none;
+}
+
+.composer .comment-input-box:focus-within .emoji-toggle-btn {
+  display: inline-flex;
 }
 
 .comment-input-actions {
