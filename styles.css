@@ -181,9 +181,14 @@ textarea {
 
 /* the content column (heading, form, actions) is centered as a block
    within the wizard's available width — not text-align:center, just
-   not left-anchored with a big empty gap on the right */
+   not left-anchored with a big empty gap on the right. Same 720px as
+   .step/.wizard-actions below (not the old 883px, which never
+   actually widened anything since the h1/lede inside already cap at
+   720px themselves — it only ever left the fields and the heading
+   centered at different widths, so their edges didn't line up) so
+   every block in the column shares one consistent left/right edge. */
 .wizard-head {
-  max-width: 883px;
+  max-width: 720px;
   margin: 0 auto;
 }
 
