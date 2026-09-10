@@ -163,7 +163,7 @@ textarea {
    language as the rest of the app's decorative chrome */
 .masthead-date {
   font-size: var(--fs-micro);
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: 0.08em;
   color: var(--ink-2);
 }
