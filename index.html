@@ -17,22 +17,25 @@
 
     <!-- ONBOARDING -->
     <main class="screen" id="screen-onboarding">
-      <section class="wizard">
-        <!-- same technical-drawing accent as the review canvas, kept
-             close in around the content rather than out at the
-             screen edges; purely decorative -->
-        <div class="flow-crosshairs" aria-hidden="true">
-          <span class="crosshair corner-tl"></span>
-          <span class="crosshair corner-tr"></span>
-          <span class="crosshair corner-bl"></span>
-          <span class="crosshair corner-br"></span>
-        </div>
-        <div class="flow-tech-lines" aria-hidden="true">
-          <span class="tech-line is-left"></span>
-          <span class="tech-line is-right"></span>
-          <span class="tech-line is-bottom"></span>
-        </div>
+      <!-- same technical-drawing accent as the review canvas, full-
+           bleed across the screen — corner inset is generous enough
+           to clear the progress bar/step heading; purely decorative -->
+      <div class="flow-crosshairs" aria-hidden="true">
+        <span class="crosshair corner-tl"></span>
+        <span class="crosshair corner-tr"></span>
+        <span class="crosshair corner-bl"></span>
+        <span class="crosshair corner-br"></span>
+      </div>
+      <div class="flow-tech-lines" aria-hidden="true">
+        <span class="tech-line is-left"></span>
+        <span class="tech-line is-right"></span>
+        <span class="tech-line is-bottom"></span>
+        <span class="tech-dot is-left"></span>
+        <span class="tech-dot is-right"></span>
+        <span class="tech-label">Prototype review setup</span>
+      </div>
 
+      <section class="wizard">
         <div class="wizard-head">
           <p class="micro" id="step-index">Step 1 / 7</p>
           <div class="progress" aria-hidden="true">
@@ -273,6 +276,9 @@
           <span class="tech-line is-left"></span>
           <span class="tech-line is-right"></span>
           <span class="tech-line is-bottom"></span>
+          <span class="tech-dot is-left"></span>
+          <span class="tech-dot is-right"></span>
+          <span class="tech-label is-left">Prototype review</span>
         </div>
 
         <!-- page tabs — only shown once a review has more than one
