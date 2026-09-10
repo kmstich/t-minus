@@ -241,6 +241,18 @@
           <span class="canvas-countdown" id="countdown">00:00:00</span>
         </div>
 
+        <!-- purely decorative — a technical-drawing accent (symmetric
+             corner crosshairs, one per canvas corner), same thin
+             light-grey line as the masthead's own border-bottom. Comes
+             after .stage in the DOM so it paints above the prototype,
+             same as the HUD/page-tabs above already do. -->
+        <div class="canvas-crosshairs" aria-hidden="true">
+          <span class="crosshair corner-tl"></span>
+          <span class="crosshair corner-tr"></span>
+          <span class="crosshair corner-bl"></span>
+          <span class="crosshair corner-br"></span>
+        </div>
+
         <!-- page tabs — only shown once a review has more than one
              page; comments stay tied to whichever page they were left
              on, pins on the canvas only ever show the active one -->

@@ -529,12 +529,79 @@ textarea::placeholder {
   display: flex;
 }
 
+/* fine graph-paper grid, same hairline color as the masthead's own
+   border-bottom — reads clearest in the letterboxed margin around the
+   stage (the stage itself, and the prototype inside it, paint over
+   it), giving the canvas an instrument/technical-drawing feel */
 .canvas {
   position: relative;
   flex: 1;
   min-width: 0;
-  background: var(--canvas-bg);
+  background-color: var(--canvas-bg);
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 32px 32px;
   overflow: hidden;
+}
+
+/* symmetric corner crosshairs — the canvas' own registration marks,
+   one at each corner at the same inset, purely decorative */
+.canvas-crosshairs {
+  position: absolute;
+  inset: 0;
+  /* no z-index: it needs to stay BEHIND the stage (an explicit
+     z-index here would jump ahead of the stage's own z-index:auto
+     regardless of DOM order) — painting earlier in the DOM than
+     .stage is what keeps it behind */
+  pointer-events: none;
+}
+
+.crosshair {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+}
+
+.crosshair::before,
+.crosshair::after {
+  content: "";
+  position: absolute;
+  background: var(--line-2);
+}
+
+.crosshair::before {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.crosshair::after {
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+.crosshair.corner-tl {
+  top: var(--sp-6);
+  left: var(--sp-6);
+}
+
+.crosshair.corner-tr {
+  top: var(--sp-6);
+  right: var(--sp-6);
+}
+
+.crosshair.corner-bl {
+  bottom: var(--sp-6);
+  left: var(--sp-6);
+}
+
+.crosshair.corner-br {
+  bottom: var(--sp-6);
+  right: var(--sp-6);
 }
 
 /* fixed intrinsic size (see STAGE_WIDTH/STAGE_HEIGHT in app.js) — the
