@@ -554,6 +554,20 @@ textarea::placeholder {
   overflow: hidden;
 }
 
+/* the actual scroll container — separate from .canvas itself so the
+   HUD/page-tabs/decorative marks (position:absolute children of
+   .canvas) stay put in the viewport rather than scrolling away with
+   the stage. Grid + place-items:center (not flex) centers a stage
+   smaller than the visible area without flexbox's "overflowing
+   centered content becomes half-unscrollable" quirk. */
+.canvas-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  display: grid;
+  place-items: center;
+}
+
 /* an actual "+" glyph rather than a CSS-drawn cross — same idea as
    the tech-label/tech-dot below and the rest of the app's icons,
    which lean on real characters over custom shapes where a glyph
@@ -705,20 +719,17 @@ textarea::placeholder {
 }
 
 /* fixed intrinsic size (see STAGE_WIDTH/STAGE_HEIGHT in app.js) — the
-   prototype always renders at this exact viewport, then the whole
-   stage is scaled as one unit by fitStage() to fill the available
-   canvas. Because scaling never reflows the page underneath, a pin's
-   fractional x/y always lands on the same spot regardless of window
-   size — only a real content change moves it. */
+   prototype always renders at its true, original 1440x900 size, never
+   scaled up or down. Because it never reflows on window resize, a
+   pin's fractional x/y always lands on the same spot regardless of
+   window size — only a real content change moves it. */
 .stage {
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
   width: 1440px;
   height: 900px;
+  flex: none;
   background: var(--canvas-bg);
   overflow: hidden;
-  transform-origin: top left;
 }
 
 .proto-frame {
@@ -1838,6 +1849,7 @@ button.tag-chip {
   left: var(--sp-4);
   bottom: var(--sp-4);
   z-index: 4;
+  border: 0;
   box-shadow: 0 8px 24px rgba(var(--ink-rgb), 0.12);
 }
 

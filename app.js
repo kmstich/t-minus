@@ -2246,31 +2246,14 @@ const setMode = (next) => {
   if (next !== "comment") closeComposer();
 };
 
-/* ---------- stage scaling ----------
- * The stage is a fixed-size artboard (matches .stage in styles.css)
- * that's scaled as a whole to fit whatever room the canvas actually
- * has. Scaling never reflows the page inside it — only the outer
- * canvas' width/height changes reflow a responsive prototype — so
- * this is what keeps a pin's fractional x/y anchored to the same
- * visual spot on the prototype regardless of window size, sidebar
- * width, etc. Recomputed on every canvas resize via ResizeObserver.
+/* ---------- prototype frame ----------
+ * The stage (see .stage in styles.css) is a fixed 1440x900 artboard
+ * that always renders at that exact size — never scaled — so the
+ * prototype displays at its original dimensions and never reflows on
+ * window resize; only how much of it is visible (via .canvas-scroll)
+ * changes. That's what keeps a pin's fractional x/y anchored to the
+ * same visual spot on the prototype regardless of window size.
  */
-
-const STAGE_WIDTH = 1440;
-const STAGE_HEIGHT = 900;
-
-const fitStage = () => {
-  const canvasRect = el.canvas.getBoundingClientRect();
-  if (!canvasRect.width || !canvasRect.height) return;
-  const scale = Math.min(canvasRect.width / STAGE_WIDTH, canvasRect.height / STAGE_HEIGHT);
-  const left = (canvasRect.width - STAGE_WIDTH * scale) / 2;
-  const top = (canvasRect.height - STAGE_HEIGHT * scale) / 2;
-  el.stage.style.transform = `translate(${left}px, ${top}px) scale(${scale})`;
-};
-
-new ResizeObserver(fitStage).observe(el.canvas);
-
-/* ---------- prototype frame ---------- */
 
 let frameLoaded = false;
 
@@ -2516,7 +2499,6 @@ const openWorkspace = () => {
   el.screenWorkspace.classList.remove("is-hidden");
   ensurePages();
   renderPageTabs();
-  fitStage();
   renderWorkspace();
   renderPrototypeSurface();
   updateSyncUI();

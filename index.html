@@ -218,21 +218,26 @@
     <!-- WORKSPACE -->
     <main class="workspace is-hidden" id="screen-workspace">
       <div class="canvas" id="canvas">
-        <!-- fixed-size stage, scaled as one unit to fit the canvas (see
-             fitStage() in app.js) so the prototype never reflows on
-             window resize — only zooms — keeping every pin's
-             fractional anchor pointed at the same spot on the page -->
-        <div class="stage" id="stage">
-          <iframe
-            id="proto-frame"
-            class="proto-frame"
-            title="Prototype under review"
-            referrerpolicy="no-referrer"
-          ></iframe>
+        <!-- the stage always renders at its true 1440x900 size — never
+             scaled — so the prototype displays at its original
+             dimensions and never reflows on window resize (only the
+             visible crop changes); a pin's fractional anchor still
+             always points at the same spot on the page. The canvas
+             scrolls to reveal the rest when it's bigger than the
+             visible area, and centers it when smaller. -->
+        <div class="canvas-scroll" id="canvas-scroll">
+          <div class="stage" id="stage">
+            <iframe
+              id="proto-frame"
+              class="proto-frame"
+              title="Prototype under review"
+              referrerpolicy="no-referrer"
+            ></iframe>
 
-          <div class="overlay" id="overlay">
-            <div class="pin-layer" id="pin-layer"></div>
-            <div class="pin-preview is-hidden" id="pin-preview"></div>
+            <div class="overlay" id="overlay">
+              <div class="pin-layer" id="pin-layer"></div>
+              <div class="pin-preview is-hidden" id="pin-preview"></div>
+            </div>
           </div>
         </div>
 
