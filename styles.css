@@ -158,8 +158,24 @@ textarea {
 }
 
 /* WIZARD */
+/* same technical-drawing accent as the review canvas, toned down
+   further — the flow is mostly form content, not an artboard, so the
+   grid needs to sit behind everything without competing for attention */
 .screen {
+  position: relative;
   padding-bottom: var(--sp-20);
+  background-image: linear-gradient(rgba(var(--ink-rgb), 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--ink-rgb), 0.02) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* marks the corners of the page itself (not the viewport) — it
+   scrolls with the content, same as the canvas' crosshairs mark the
+   stage rather than floating fixed over it */
+.flow-crosshairs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .wizard {
