@@ -2339,7 +2339,15 @@ const ensurePages = () => {
       },
     ];
   }
-  if (!activePage()) state.review.activePageId = state.review.pages[0].id;
+  // activePage() falls back to pages[0] whenever activePageId doesn't
+  // match anything, which would make this check always pass if it
+  // called activePage() itself — check membership directly instead,
+  // otherwise activePageId can stay "" forever and every pin (which
+  // filters on the raw activePageId, not the fallback) silently
+  // fails to match its page and never renders
+  if (!state.review.pages.some((p) => p.id === state.review.activePageId)) {
+    state.review.activePageId = state.review.pages[0].id;
+  }
   state.comments.forEach((c) => {
     if (!c.pageId) c.pageId = commentPageId(c);
   });
@@ -2562,25 +2570,30 @@ const readCollapsedRailSections = () => {
   }
 };
 
-const wireRailSection = (toggleBtn, bodyEl, sectionId) => {
+// Comments always opens expanded (persist: false) — a reviewer's
+// most important panel shouldn't stay collapsed just because a past
+// session left it that way. Ready to go? still remembers its state.
+const wireRailSection = (toggleBtn, bodyEl, sectionId, persist = true) => {
   const apply = (isCollapsed) => {
     bodyEl.classList.toggle("is-hidden", isCollapsed);
     toggleBtn.classList.toggle("is-collapsed", isCollapsed);
     toggleBtn.setAttribute("aria-expanded", String(!isCollapsed));
   };
-  apply(readCollapsedRailSections().has(sectionId));
+  apply(persist && readCollapsedRailSections().has(sectionId));
 
   toggleBtn.addEventListener("click", () => {
-    const collapsed = readCollapsedRailSections();
-    const nowCollapsed = !collapsed.has(sectionId);
-    if (nowCollapsed) collapsed.add(sectionId);
-    else collapsed.delete(sectionId);
-    localStorage.setItem(RAIL_COLLAPSE_KEY, JSON.stringify([...collapsed]));
+    const nowCollapsed = !toggleBtn.classList.contains("is-collapsed");
+    if (persist) {
+      const collapsed = readCollapsedRailSections();
+      if (nowCollapsed) collapsed.add(sectionId);
+      else collapsed.delete(sectionId);
+      localStorage.setItem(RAIL_COLLAPSE_KEY, JSON.stringify([...collapsed]));
+    }
     apply(nowCollapsed);
   });
 };
 
-wireRailSection(el.railToggleComments, el.railBodyComments, "comments");
+wireRailSection(el.railToggleComments, el.railBodyComments, "comments", false);
 wireRailSection(el.railToggleVote, el.railBodyVote, "vote");
 
 /* ---------- hamburger menu (macOS-style: click outside to dismiss) ---------- */

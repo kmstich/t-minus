@@ -123,8 +123,7 @@ textarea {
 .emoji-toggle-btn,
 .send-btn,
 .reaction-add-btn,
-.file-picker-icon,
-.sync-status-icon {
+.file-picker-icon {
   font-size: 16px;
   line-height: 1;
 }
@@ -140,11 +139,13 @@ textarea {
   border-bottom: 1px solid var(--line);
 }
 
+/* the wordmark/date sit close to the true edges — independent of the
+   wizard's own 160px content padding just below, which is unchanged */
 .masthead-inner {
   max-width: 1440px;
   margin: 0 auto;
   height: var(--sp-16);
-  padding: var(--sp-4) 160px;
+  padding: var(--sp-4) var(--sp-6);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -547,16 +548,6 @@ textarea::placeholder {
   overflow: hidden;
 }
 
-/* symmetric corner crosshairs — the canvas' own registration marks,
-   one at each corner at the same inset, purely decorative. Comes
-   after .stage in the DOM (both are z-index:auto) so it paints above
-   the prototype, same as the HUD/page-tabs already do. */
-.canvas-crosshairs {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
 /* an actual "+" glyph rather than a CSS-drawn cross — same idea as
    the tech-label/tech-dot below and the rest of the app's icons,
    which lean on real characters over custom shapes where a glyph
@@ -573,30 +564,12 @@ textarea::placeholder {
   color: var(--line-2);
 }
 
-.crosshair.corner-tl {
-  top: var(--sp-6);
-  left: var(--sp-6);
-}
-
-.crosshair.corner-tr {
-  top: var(--sp-6);
-  right: var(--sp-6);
-}
-
-.crosshair.corner-bl {
-  bottom: var(--sp-6);
-  left: var(--sp-6);
-}
-
-.crosshair.corner-br {
-  bottom: var(--sp-6);
-  right: var(--sp-6);
-}
-
-/* a handful of select lines rather than a full grid — an open
-   bracket (left rule, right rule, bottom rule), same hairline color
-   as the masthead's own border-bottom. Shared by the canvas and the
-   flow; each names its own inset (see .canvas-tech-lines/.flow-tech-lines). */
+/* a handful of select lines rather than a full grid, same hairline
+   color as the masthead's own border-bottom. Shared base — the
+   canvas and flow each position their own lines/marks explicitly
+   (see .canvas-tech-lines/.flow-tech-lines below) rather than
+   through a shared inset, since each has different chrome to route
+   around. */
 .tech-line {
   position: absolute;
   background: var(--line);
@@ -604,30 +577,43 @@ textarea::placeholder {
 
 .tech-line.is-left,
 .tech-line.is-right {
-  top: 0;
-  bottom: 0;
   width: 1px;
 }
 
-.tech-line.is-left {
-  left: 0;
-}
-
-.tech-line.is-right {
-  right: 0;
-}
-
 .tech-line.is-bottom {
-  left: 0;
-  right: 0;
-  bottom: 0;
   height: 1px;
 }
 
 .canvas-tech-lines {
   position: absolute;
-  inset: var(--sp-6);
+  inset: 0;
   pointer-events: none;
+}
+
+/* an L-shaped bracket clear of the HUD (top-left), the mode toolbar
+   (bottom-left), and the floating rail (right) — the two lines still
+   meet each other at their shared corner, which is fine, just
+   nothing else */
+.canvas-tech-lines .tech-line.is-left {
+  left: 256px;
+  top: 24px;
+  bottom: 24px;
+}
+
+.canvas-tech-lines .tech-line.is-bottom {
+  left: 256px;
+  right: 313px;
+  bottom: 24px;
+}
+
+.crosshair.canvas-head-left {
+  top: 18px;
+  left: 250px;
+}
+
+.crosshair.canvas-foot-right {
+  bottom: 18px;
+  left: 961px;
 }
 
 /* fixed rather than absolute — deliberately crosses the masthead too,
@@ -636,6 +622,20 @@ textarea::placeholder {
   position: fixed;
   inset: 0 64px;
   pointer-events: none;
+}
+
+.flow-tech-lines .tech-line.is-left,
+.flow-tech-lines .tech-line.is-right {
+  top: 0;
+  bottom: 0;
+}
+
+.flow-tech-lines .tech-line.is-left {
+  left: 0;
+}
+
+.flow-tech-lines .tech-line.is-right {
+  right: 0;
 }
 
 /* one crosshair per line, where it meets the bottom of the viewport —
@@ -663,33 +663,26 @@ textarea::placeholder {
   top: 72px;
 }
 
-/* small decorative marks riding the vertical rules — a bead on each
-   line (symmetric, same height both sides) and a tiny rotated label
-   along the right one, same restrained micro-copy language as the
-   rest of the app's chrome (uppercase, tracked-out, --ink-2) */
-/* a "•" glyph rather than a CSS-drawn circle */
+/* a small mark and a tiny rotated label riding the canvas' vertical
+   rule — a "•" glyph rather than a CSS-drawn circle, same restrained
+   micro-copy language as the rest of the app's chrome (uppercase,
+   tracked-out, --ink-2). Positioned as a percentage of the canvas'
+   own height so they stay on the line regardless of viewport size. */
 .tech-dot {
   position: absolute;
-  top: 50%;
   font-size: 10px;
   line-height: 1;
   color: var(--line-2);
+}
+
+.tech-dot.canvas-mid-left {
+  left: 256px;
+  top: 45%;
   transform: translate(-50%, -50%);
-}
-
-.tech-dot.is-left {
-  left: 0;
-}
-
-.tech-dot.is-right {
-  left: 100%;
 }
 
 .tech-label {
   position: absolute;
-  top: 50%;
-  right: var(--sp-2);
-  transform: translateY(-50%);
   writing-mode: vertical-rl;
   font-size: 10px;
   font-weight: 600;
@@ -699,11 +692,10 @@ textarea::placeholder {
   white-space: nowrap;
 }
 
-/* the canvas' right edge sits under the floating comment rail — the
-   label goes on the left line instead, where nothing else covers it */
-.tech-label.is-left {
-  right: auto;
-  left: var(--sp-2);
+.tech-label.canvas-mid-left {
+  left: 256px;
+  top: 55%;
+  transform: translateX(-50%);
 }
 
 /* fixed intrinsic size (see STAGE_WIDTH/STAGE_HEIGHT in app.js) — the
@@ -718,7 +710,7 @@ textarea::placeholder {
   left: 0;
   width: 1440px;
   height: 900px;
-  background: var(--white);
+  background: var(--canvas-bg);
   overflow: hidden;
   transform-origin: top left;
 }
@@ -729,7 +721,7 @@ textarea::placeholder {
   width: 100%;
   height: 100%;
   border: 0;
-  background: var(--white);
+  background: var(--canvas-bg);
 }
 
 .overlay {
@@ -795,7 +787,6 @@ textarea::placeholder {
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--line-2);
-  border-radius: var(--radius-btn);
   box-shadow: 0 8px 24px rgba(var(--ink-rgb), 0.16);
 }
 
@@ -803,7 +794,6 @@ textarea::placeholder {
   border: 0;
   background: none;
   padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--radius-btn);
   font-size: var(--fs-micro);
   color: var(--ink-2);
   cursor: pointer;
@@ -940,7 +930,6 @@ body.is-dragging-pin * {
   font-size: var(--fs-micro);
   line-height: 1.4;
   padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--radius-btn);
   pointer-events: none;
   z-index: 5;
   overflow: hidden;
@@ -961,13 +950,28 @@ body.is-dragging-pin * {
   bottom: var(--sp-6);
   width: 269px;
   z-index: 4;
-  background: rgba(255, 255, 255, 0.72);
+  /* grey-tinted glass, not white-tinted — matches the canvas' own
+     background instead of reading as a bright card dropped on it.
+     No border/stroke — the shadow alone separates it from the canvas. */
+  background: rgba(241, 241, 241, 0.82);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--ink);
   box-shadow: 0 20px 48px rgba(var(--ink-rgb), 0.16);
   display: flex;
   flex-direction: column;
+}
+
+/* the rail's own technical-drawing mark — sits on the rail itself
+   rather than a separate line running behind it, so nothing intersects */
+.sidebar::before {
+  content: "+";
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--line-2);
+  pointer-events: none;
 }
 
 .sidebar-head {
@@ -1043,42 +1047,6 @@ body.is-dragging-pin * {
   color: var(--ink);
 }
 
-/* sync status: bottom of the sidebar, one icon + a two/three-word
-   label — the file path and exact error used to live here, which
-   read as noise for what's meant to be a quiet, glanceable footer */
-.sync-status {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  color: var(--ink-2);
-}
-
-.sync-status-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  flex: none;
-}
-
-.sync-status-icon.is-spinning {
-  animation: sync-spin 1s linear infinite;
-}
-
-@keyframes sync-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-#sync-status-label.is-synced {
-  color: var(--green);
-}
-
-#sync-status-label.is-error {
-  color: var(--red);
-  font-weight: 700;
-}
 
 /* THREADS (comment feed) */
 .threads {
@@ -1171,7 +1139,6 @@ body.is-dragging-pin * {
   align-items: center;
   gap: var(--sp-1);
   padding: var(--sp-1) var(--sp-2);
-  border-radius: 999px;
   font-size: var(--fs-micro);
   border: 1px solid var(--tag-color, var(--ink));
   color: var(--tag-color, var(--ink));
@@ -1351,7 +1318,6 @@ button.tag-chip {
   align-items: center;
   gap: var(--sp-1);
   padding: var(--sp-1) var(--sp-2);
-  border-radius: 999px;
   border: 1px solid var(--line-2);
   background: none;
   font-size: var(--fs-micro);
@@ -1425,12 +1391,14 @@ button.tag-chip {
 }
 
 /* MODALS (hamburger menu, details, go/no-go, composer) */
+/* grey-tinted glass rather than white-tinted — legible and still
+   frosted, just not a bright white card */
 .modal {
   position: fixed;
   z-index: 7;
   width: 320px;
   max-width: calc(100vw - var(--sp-8));
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(241, 241, 241, 0.82);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--ink);
@@ -1572,11 +1540,10 @@ button.tag-chip {
   top: 60px;
   right: var(--sp-4);
   width: 200px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(241, 241, 241, 0.82);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--line-2);
-  border-radius: var(--radius-btn);
   box-shadow: 0 8px 24px rgba(var(--ink-rgb), 0.16);
   padding: var(--sp-1) 0;
   z-index: 7;
@@ -1689,13 +1656,11 @@ button.tag-chip {
   display: flex;
   align-items: center;
   border: 1px solid var(--line-2);
-  border-radius: 999px;
 }
 
 .comment-input-box:focus-within {
   flex-direction: column;
   align-items: stretch;
-  border-radius: var(--radius-btn);
   border-color: var(--blue);
   box-shadow: 0 0 0 1px var(--blue);
 }
@@ -1705,7 +1670,7 @@ button.tag-chip {
    already sits inside that card's own frosted background, so it
    stays plain */
 .composer .comment-input-box {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(241, 241, 241, 0.82);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   box-shadow: 0 20px 48px rgba(var(--ink-rgb), 0.16);
@@ -1833,9 +1798,8 @@ button.tag-chip {
    of a custom toolbar next to a bare native <select> */
 .segmented {
   display: inline-flex;
-  background: var(--white);
+  background: var(--canvas-bg);
   border: 1px solid var(--ink);
-  border-radius: var(--radius-btn);
   overflow: hidden;
 }
 
@@ -1914,10 +1878,6 @@ button.tag-chip {
        separate mobile-only type-scale step */
     font-size: calc(var(--fs-wizard-h1) * 0.75);
     min-height: calc(var(--fs-wizard-h1) * 0.75 * 1.15 * 2);
-  }
-
-  .masthead-inner {
-    padding: var(--sp-4) var(--sp-6);
   }
 
   .sidebar {
