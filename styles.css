@@ -63,6 +63,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* the masthead is a permanent top bar on both screens — the wizard
+   scrolls beneath it same as before, and the workspace (see .workspace
+   below) now occupies the remaining height rather than covering it */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.masthead {
+  flex: none;
+}
+
 h1,
 h2,
 h3,
@@ -215,7 +228,7 @@ textarea {
   width: 200px;
   height: 8px;
   background: var(--line);
-  border-radius: 999px;
+  border-radius: 0;
   margin: var(--sp-2) 0 var(--sp-6);
   position: relative;
   overflow: hidden;
@@ -461,6 +474,14 @@ textarea::placeholder {
   font-weight: 500;
 }
 
+/* the flow (onboarding wizard, plus its own existing-review modal) is
+   square throughout — no rounded corners anywhere, distinct from the
+   review canvas's rounded, frosted floating chrome */
+.wizard-actions .btn,
+#existing-review-modal .btn {
+  border-radius: 0;
+}
+
 .link {
   border: 0;
   background: none;
@@ -496,9 +517,14 @@ textarea::placeholder {
 }
 
 /* ============ WORKSPACE ============ */
+/* the masthead above stays on screen (see body/.masthead further up),
+   so the workspace only needs to fill whatever's left beneath it —
+   position:relative gives it a stacking context for the canvas'/rail's
+   own absolutely/fixed-positioned overlays without reaching past it */
 .workspace {
-  position: fixed;
-  inset: 0;
+  position: relative;
+  flex: 1;
+  min-height: 0;
   z-index: 5;
   display: flex;
 }
@@ -648,12 +674,6 @@ textarea::placeholder {
   border-color: var(--ink);
 }
 
-.canvas-brand {
-  font-size: var(--fs-small);
-  font-weight: 700;
-  color: var(--ink-2);
-}
-
 .canvas-countdown {
   font-size: var(--fs-small);
   font-weight: 700;
@@ -761,15 +781,24 @@ body.is-dragging-pin * {
   -webkit-box-orient: vertical;
 }
 
-/* SIDEBAR */
+/* FLOATING COMMENT RAIL — 24px off the canvas' right edge and top/
+   bottom, same frosted-glass surface as the app's other content
+   modals (border + blur + shadow, no rounded corners) rather than a
+   flush docked panel */
 .sidebar {
+  position: absolute;
+  top: var(--sp-6);
+  right: var(--sp-6);
+  bottom: var(--sp-6);
   width: 269px;
-  flex: none;
-  background: var(--white);
-  border-left: 1px solid var(--line-2);
+  z-index: 4;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--ink);
+  box-shadow: 0 20px 48px rgba(var(--ink-rgb), 0.16);
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
 .sidebar-head {
@@ -777,7 +806,7 @@ body.is-dragging-pin * {
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-2);
-  padding: var(--sp-6) var(--sp-4) var(--sp-4);
+  padding: var(--sp-4);
   border-bottom: 1px solid var(--line-2);
 }
 
@@ -799,18 +828,50 @@ body.is-dragging-pin * {
   flex: none;
 }
 
-.sidebar-body {
+.sidebar-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--sp-4);
+}
+
+/* each piece of the rail (Comments, Ready to go?) collapses on its
+   own — click the header row to toggle; state persists per browser
+   (see wireRailSection() in app.js) */
+.rail-section + .rail-section {
+  border-top: 1px solid var(--line-2);
+}
+
+.rail-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: var(--sp-4) var(--sp-4) var(--sp-2);
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.rail-chevron {
+  flex: none;
+  color: var(--ink-2);
+  transition: transform 0.15s ease;
+}
+
+.rail-section-toggle.is-collapsed .rail-chevron {
+  transform: rotate(-90deg);
+}
+
+.rail-section-body {
+  padding: 0 var(--sp-4) var(--sp-4);
 }
 
 .comments-heading {
   font-size: var(--fs-small);
   font-weight: 700;
   color: var(--ink);
-  margin-bottom: var(--sp-2);
 }
 
 /* sync status: bottom of the sidebar, one icon + a two/three-word
@@ -848,14 +909,6 @@ body.is-dragging-pin * {
 #sync-status-label.is-error {
   color: var(--red);
   font-weight: 700;
-}
-
-.sidebar-foot {
-  padding: var(--sp-4);
-  border-top: 1px solid var(--line-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
 }
 
 /* THREADS (comment feed) */

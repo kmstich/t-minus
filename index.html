@@ -235,9 +235,9 @@
           </a>
         </div>
 
-        <!-- floating brand + countdown over the canvas -->
+        <!-- floating countdown over the canvas — the T-Minus wordmark
+             itself now lives permanently in the masthead above -->
         <div class="canvas-hud">
-          <span class="canvas-brand">T-Minus</span>
           <span class="canvas-countdown" id="countdown">00:00:00</span>
         </div>
 
@@ -259,7 +259,9 @@
         </div>
       </div>
 
-      <!-- RIGHT SIDEBAR -->
+      <!-- FLOATING COMMENT RAIL — 24px off the right edge, its two
+           sections (Comments, Ready to go?) each independently
+           collapsible; see wireRailSection() in app.js -->
       <aside class="sidebar">
         <div class="sidebar-head">
           <h2 id="review-title">Review</h2>
@@ -268,23 +270,33 @@
           </button>
         </div>
 
-        <div class="sidebar-body">
-          <p class="comments-heading" id="comments-heading">Comments (0)</p>
-          <div id="threads" class="threads"></div>
-          <p class="sync-status" id="sync-status-label">
-            <span class="sync-status-icon" id="sync-status-icon"></span>
-            <span id="sync-status-text">Not synced</span>
-          </p>
-        </div>
-
-        <div class="sidebar-foot">
-          <div class="field">
-            <span class="micro">Ready to go?</span>
-            <div class="segmented vote-toggle" id="vote-toggle" role="group" aria-label="Go / no-go vote">
-              <button type="button" class="segmented-btn" id="vote-go" aria-pressed="false">Go</button>
-              <button type="button" class="segmented-btn" id="vote-nogo" aria-pressed="false">No-go</button>
+        <div class="sidebar-scroll">
+          <section class="rail-section">
+            <button type="button" class="rail-section-toggle" id="rail-toggle-comments" aria-expanded="true">
+              <svg class="icon rail-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+              <span class="comments-heading" id="comments-heading">Comments (0)</span>
+            </button>
+            <div class="rail-section-body" id="rail-body-comments">
+              <div id="threads" class="threads"></div>
+              <p class="sync-status" id="sync-status-label">
+                <span class="sync-status-icon" id="sync-status-icon"></span>
+                <span id="sync-status-text">Not synced</span>
+              </p>
             </div>
-          </div>
+          </section>
+
+          <section class="rail-section">
+            <button type="button" class="rail-section-toggle" id="rail-toggle-vote" aria-expanded="true">
+              <svg class="icon rail-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+              <span class="micro">Ready to go?</span>
+            </button>
+            <div class="rail-section-body" id="rail-body-vote">
+              <div class="segmented vote-toggle" id="vote-toggle" role="group" aria-label="Go / no-go vote">
+                <button type="button" class="segmented-btn" id="vote-go" aria-pressed="false">Go</button>
+                <button type="button" class="segmented-btn" id="vote-nogo" aria-pressed="false">No-go</button>
+              </div>
+            </div>
+          </section>
         </div>
       </aside>
 

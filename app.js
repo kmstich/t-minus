@@ -200,6 +200,10 @@ const el = {
   threads: $("#threads"),
   voteGo: $("#vote-go"),
   voteNogo: $("#vote-nogo"),
+  railToggleComments: $("#rail-toggle-comments"),
+  railBodyComments: $("#rail-body-comments"),
+  railToggleVote: $("#rail-toggle-vote"),
+  railBodyVote: $("#rail-body-vote"),
 
   menuModal: $("#menu-modal"),
   modeInteract: $("#mode-interact"),
@@ -2538,6 +2542,45 @@ const resetToWizard = () => {
 
 el.modeInteract.addEventListener("click", () => setMode("interact"));
 el.modeComment.addEventListener("click", () => setMode("comment"));
+
+/* ---------- collapsible rail sections ----------
+ * The floating comment rail's two pieces (Comments, Ready to go?)
+ * each collapse independently via their own header row. Purely a
+ * per-browser display preference, same as "mark as unread" above —
+ * persisted so a reload doesn't spring them back open, but never
+ * synced or shown to anyone else.
+ */
+
+const RAIL_COLLAPSE_KEY = "tminus.railCollapsed";
+
+const readCollapsedRailSections = () => {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(RAIL_COLLAPSE_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+};
+
+const wireRailSection = (toggleBtn, bodyEl, sectionId) => {
+  const apply = (isCollapsed) => {
+    bodyEl.classList.toggle("is-hidden", isCollapsed);
+    toggleBtn.classList.toggle("is-collapsed", isCollapsed);
+    toggleBtn.setAttribute("aria-expanded", String(!isCollapsed));
+  };
+  apply(readCollapsedRailSections().has(sectionId));
+
+  toggleBtn.addEventListener("click", () => {
+    const collapsed = readCollapsedRailSections();
+    const nowCollapsed = !collapsed.has(sectionId);
+    if (nowCollapsed) collapsed.add(sectionId);
+    else collapsed.delete(sectionId);
+    localStorage.setItem(RAIL_COLLAPSE_KEY, JSON.stringify([...collapsed]));
+    apply(nowCollapsed);
+  });
+};
+
+wireRailSection(el.railToggleComments, el.railBodyComments, "comments");
+wireRailSection(el.railToggleVote, el.railBodyVote, "vote");
 
 /* ---------- hamburger menu (macOS-style: click outside to dismiss) ---------- */
 
