@@ -2977,6 +2977,32 @@ el.composerEmojiToggle.addEventListener("click", () => {
   openEmojiInsertPicker(el.composerEmojiToggle, el.commentBody);
 });
 
+/* ---------- dev shortcut ----------
+ * ?dev=1 in the URL seeds a fresh throwaway review and skips the
+ * wizard entirely, straight to the workspace — for local testing
+ * only. It's not linked from anywhere in the UI, and it always
+ * overwrites whatever's in localStorage (a clean, repeatable slate on
+ * every reload beats "only if nothing's there yet" for this).
+ */
+if (new URLSearchParams(location.search).get("dev")) {
+  const blank = blankState();
+  state = {
+    ...blank,
+    created: true,
+    creator: { name: "Dev", email: "" },
+    review: {
+      ...blank.review,
+      resolvedKind: "html",
+      resolvedPath: "index.html",
+      resolvedHtml:
+        '<html><body style="font-family:sans-serif;padding:40px"><h1>Dev prototype</h1><p>Seeded by ?dev=1 for local testing.</p></body></html>',
+      title: "Dev Review",
+      slug: "dev-review",
+    },
+  };
+  save();
+}
+
 /* ---------- boot ---------- */
 
 el.mastheadDate.textContent = `// ${shortDate(new Date()).toUpperCase()}`;
