@@ -2978,28 +2978,59 @@ el.composerEmojiToggle.addEventListener("click", () => {
 });
 
 /* ---------- dev shortcut ----------
- * ?dev=1 in the URL seeds a fresh throwaway review and skips the
- * wizard entirely, straight to the workspace — for local testing
- * only. It's not linked from anywhere in the UI, and it always
- * overwrites whatever's in localStorage (a clean, repeatable slate on
- * every reload beats "only if nothing's there yet" for this).
+ * ?dev=<name> in the URL seeds fully-filled-in placeholder state and
+ * jumps straight to a specific point — either a named wizard step
+ * (skipping everything before it, so its own validation never blocks
+ * rendering) or "workspace"/"1" (the previous behavior: skip the
+ * wizard entirely). Not linked from anywhere in the UI, dev-only, and
+ * always overwrites whatever's in localStorage — a clean, repeatable
+ * slate on every reload beats "only if nothing's there yet" for this.
+ *
+ * Step names match STEPS above, in order: creator, repo, prototype,
+ * flow-name, deadline, focus, summary.
  */
-if (new URLSearchParams(location.search).get("dev")) {
+const DEV_STEP_NAMES = ["creator", "repo", "prototype", "flow-name", "deadline", "focus", "summary"];
+
+const devSeedReview = (blank) => ({
+  ...blank.review,
+  repo: "https://github.com/kmstich/t-minus",
+  repoConnected: true,
+  resolvedKind: "html",
+  resolvedPath: "index.html",
+  resolvedHtml:
+    '<html><body style="font-family:sans-serif;padding:40px"><h1>Dev prototype</h1><p>Seeded for local testing.</p></body></html>',
+  title: "Dev Flow Preview",
+  tzero: defaultTZero(),
+  brief: "Focus areas: Layout, Content",
+  briefAreas: ["Layout", "Content"],
+  slug: "dev-flow-preview",
+});
+
+const devParam = new URLSearchParams(location.search).get("dev");
+if (devParam === "1" || devParam === "workspace") {
   const blank = blankState();
   state = {
     ...blank,
     created: true,
     creator: { name: "Dev", email: "" },
     review: {
-      ...blank.review,
-      resolvedKind: "html",
-      resolvedPath: "index.html",
+      ...devSeedReview(blank),
       resolvedHtml:
-        '<html><body style="font-family:sans-serif;padding:40px"><h1>Dev prototype</h1><p>Seeded by ?dev=1 for local testing.</p></body></html>',
+        '<html><body style="font-family:sans-serif;padding:40px"><h1>Dev prototype</h1><p>Seeded by ?dev=workspace for local testing.</p></body></html>',
       title: "Dev Review",
       slug: "dev-review",
     },
   };
+  save();
+} else if (devParam && DEV_STEP_NAMES.includes(devParam)) {
+  const blank = blankState();
+  state = {
+    ...blank,
+    created: false,
+    creator: { name: "Dev", email: "dev@example.com" },
+    review: devSeedReview(blank),
+  };
+  step = DEV_STEP_NAMES.indexOf(devParam) + 1;
   save();
 }
 
