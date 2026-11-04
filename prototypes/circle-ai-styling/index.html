@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Circle AI Styling</title>
+    <style>
+      :root {
+        --bg: #f4f1ee;
+        --ink: #1d1d1f;
+        --ink-2: #5c5c60;
+        --red: #cc0000;
+        --chip: rgba(28, 28, 30, 0.86);
+        --glass: rgba(255, 255, 255, 0.72);
+        --hair: rgba(0, 0, 0, 0.08);
+        --shadow: 0 8px 28px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+        --ease: cubic-bezier(0.32, 0.72, 0, 1);
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body { height: 100%; }
+
+      body {
+        background: #e7e4e1;
+        color: var(--ink);
+        font: 15px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        display: grid;
+        place-items: center;
+      }
+
+      button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+      svg { display: block; }
+
+      /* ---------- device ---------- */
+      .phone {
+        position: relative;
+        width: 390px;
+        height: 844px;
+        background: var(--bg);
+        border-radius: 48px;
+        overflow: hidden;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        isolation: isolate;
+      }
+
+      @media (max-width: 430px), (max-height: 860px) and (max-width: 500px) {
+        body { display: block; background: var(--bg); }
+        .phone { width: 100%; height: 100dvh; border-radius: 0; box-shadow: none; }
+      }
+
+      /* ---------- status bar ---------- */
+      .status {
+        position: absolute; inset: 0 0 auto 0; height: 54px;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 30px 0 52px;
+        font-weight: 600; font-size: 17px; letter-spacing: -0.2px;
+        z-index: 5; pointer-events: none;
+      }
+      .status-icons { display: flex; gap: 6px; align-items: center; }
+
+      /* ---------- hero ---------- */
+      .hero {
+        position: absolute; inset: 0 0 auto 0;
+        /* photo is 378×582 — keep its aspect so hotspot %s stay pinned */
+        aspect-ratio: 378 / 582;
+        margin-top: 10px;
+      }
+      .hero img {
+        width: 100%; height: 100%; object-fit: cover; display: block;
+        -webkit-mask-image: linear-gradient(#000 82%, transparent);
+                mask-image: linear-gradient(#000 82%, transparent);
+        user-select: none; -webkit-user-drag: none;
+      }
+
+      .back {
+        position: absolute; top: 58px; left: 16px; z-index: 6;
+        width: 44px; height: 44px; border-radius: 50%;
+        display: grid; place-items: center;
+        background: var(--glass);
+        backdrop-filter: blur(16px) saturate(1.6);
+        -webkit-backdrop-filter: blur(16px) saturate(1.6);
+        box-shadow: var(--shadow);
+      }
+
+      /* ---------- hotspots ---------- */
+      .hotspots { position: absolute; inset: 0; pointer-events: none; }
+      .hotspot {
+        --size: 32px;
+        position: absolute;
+        top: var(--y);
+        transform: translateY(-50%);
+        z-index: 4;
+        display: flex; align-items: center;
+        height: var(--size);
+        min-width: var(--size);
+        padding: 0;
+        border-radius: 999px;
+        background: var(--chip);
+        color: #fff;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+        pointer-events: auto;
+        transition: height 0.42s var(--ease), box-shadow 0.3s, opacity 0.3s;
+        -webkit-tap-highlight-color: transparent;
+      }
+      /* anchor the dot at its spot; the pill grows inward, toward the item */
+      .hotspot[data-side="left"]  { left:  calc(var(--x) - var(--size) / 2); }
+      .hotspot[data-side="right"] { right: calc(100% - var(--x) - var(--size) / 2); flex-direction: row-reverse; }
+
+      .hotspot-icon {
+        flex: 0 0 var(--size);
+        width: var(--size); height: var(--size);
+        display: grid; place-items: center;
+        transition: flex-basis 0.42s var(--ease), width 0.42s var(--ease), height 0.42s var(--ease);
+      }
+
+      .hotspot-label {
+        display: grid;
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-align: left;
+        transition: max-width 0.42s var(--ease), opacity 0.2s, padding 0.42s var(--ease);
+      }
+      .hotspot[data-side="right"] .hotspot-label { text-align: right; }
+      .hotspot-name  { font-size: 13px; font-weight: 600; letter-spacing: -0.1px; }
+      .hotspot-meta  { font-size: 12px; color: rgba(255, 255, 255, 0.7); }
+      .hotspot-meta b { color: #fff; font-weight: 600; }
+
+      .hotspot-add {
+        flex: 0 0 auto;
+        width: 0; height: 28px; margin: 0;
+        border-radius: 50%;
+        display: grid; place-items: center;
+        background: #fff; color: var(--ink);
+        opacity: 0; overflow: hidden;
+        transform: scale(0.6);
+        transition: width 0.42s var(--ease), margin 0.42s var(--ease), opacity 0.2s, transform 0.42s var(--ease), background 0.2s;
+      }
+
+      /* expanded */
+      .hotspot.is-open { --size: 32px; height: 48px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28); }
+      .hotspot.is-open .hotspot-icon { flex-basis: 40px; width: 40px; }
+      .hotspot.is-open .hotspot-label { max-width: 220px; opacity: 1; transition-delay: 0s, 0.1s, 0s; }
+      .hotspot.is-open .hotspot-add {
+        width: 28px; margin: 0 10px; opacity: 1; transform: scale(1);
+        transition-delay: 0s, 0s, 0.12s, 0s, 0s;
+      }
+      .hotspot.is-added .hotspot-add { background: #2e7d32; color: #fff; }
+
+      /* idle pulse — subtle "there's something here" */
+      .hotspot::after {
+        content: ""; position: absolute; inset: 0; border-radius: inherit;
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55);
+        animation: ping 2.8s var(--ease) infinite;
+        animation-delay: var(--delay, 0s);
+        pointer-events: none;
+      }
+      .hotspot.is-open::after, .hotspots.has-open .hotspot::after { animation: none; }
+      .hotspots.has-open .hotspot:not(.is-open) { opacity: 0.55; }
+      @keyframes ping {
+        0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); }
+        70%, 100% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+      }
+      .hotspot:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+      /* ---------- bottom sheet ---------- */
+      .dock {
+        position: absolute; inset: auto 12px 18px 12px; z-index: 6;
+        display: flex; flex-direction: column; gap: 10px;
+      }
+
+      .glass {
+        background: var(--glass);
+        backdrop-filter: blur(24px) saturate(1.8);
+        -webkit-backdrop-filter: blur(24px) saturate(1.8);
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+      }
+
+      .card {
+        position: relative;
+        margin: 0 8px;
+        padding: 16px 16px 12px;
+        border-radius: 18px;
+        transition: opacity 0.3s, transform 0.4s var(--ease);
+      }
+      .card.is-hidden { opacity: 0; transform: translateY(12px); pointer-events: none; }
+      .card p { font-size: 14px; padding-right: 32px; }
+      .card-close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; display: grid; place-items: center; color: var(--ink-2); }
+      .card-status { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; }
+      .card-status .spark { color: var(--red); }
+      .shimmer {
+        background: linear-gradient(90deg, var(--ink) 0%, var(--ink) 40%, #b9b9bd 50%, var(--ink) 60%, var(--ink) 100%);
+        background-size: 250% 100%;
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        animation: shimmer 1.8s linear infinite;
+      }
+      @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+      .history {
+        display: flex; align-items: center; gap: 6px;
+        margin: -4px 0 0 auto; width: fit-content;
+        padding: 7px 12px; border-radius: 999px;
+        background: #fff; font-size: 12px; font-weight: 500;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      }
+
+      .ask {
+        margin: 0 8px;
+        display: flex; align-items: center; gap: 10px;
+        height: 42px; padding: 0 6px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.92);
+      }
+      .ask-btn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+      .ask-btn.plus { background: #ececee; }
+      .ask-btn.mic  { background: var(--ink); color: #fff; width: 24px; height: 24px; margin-right: 4px; }
+      .ask input {
+        flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+        font: inherit; font-size: 15px; color: var(--ink);
+      }
+      .ask input::placeholder { color: var(--ink-2); }
+
+      .tabbar {
+        display: grid; grid-template-columns: repeat(5, 1fr);
+        height: 62px; padding: 4px; border-radius: 999px;
+      }
+      .tab {
+        position: relative;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+        font-size: 11px; font-weight: 600; border-radius: 999px;
+      }
+      .tab.is-on { color: var(--red); background: rgba(0, 0, 0, 0.06); }
+      .badge {
+        position: absolute; top: 6px; left: calc(50% + 6px);
+        min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+        background: var(--red); color: #fff; font-size: 10px; line-height: 16px; text-align: center;
+        transform: scale(0); transition: transform 0.35s var(--ease);
+      }
+      .badge.is-on { transform: scale(1); }
+      .badge.bump { animation: bump 0.4s var(--ease); }
+      @keyframes bump { 50% { transform: scale(1.35); } }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::after { animation: none !important; transition-duration: 0.01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="phone">
+      <div class="status" aria-hidden="true">
+        <span>9:41</span>
+        <span class="status-icons">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.6c2.3 0 4.4.9 6 2.4l1.1-1.2A10.4 10.4 0 0 0 8 1 10.4 10.4 0 0 0 .9 3.8L2 5a8.7 8.7 0 0 1 6-2.4Zm0 3.3c1.4 0 2.6.5 3.6 1.4l1.1-1.2A6.8 6.8 0 0 0 8 4.3a6.8 6.8 0 0 0-4.7 1.8l1.1 1.2c1-.9 2.2-1.4 3.6-1.4Zm0 3.2c-.6 0-1.2.2-1.6.6L8 11.4l1.6-1.7c-.4-.4-1-.6-1.6-.6Z"/></svg>
+          <svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="20" height="9" rx="2" fill="currentColor"/><path d="M25 4.5v4a2 2 0 0 0 0-4Z" fill="currentColor" opacity=".45"/></svg>
+        </span>
+      </div>
+
+      <button class="back" aria-label="Back">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+
+      <div class="hero">
+        <img src="assets/model.png" alt="Model wearing a cream knit sweater vest, rust linen tank and blue drawstring pants" />
+        <!-- hotspots are injected from ITEMS below so copy lives in one place -->
+        <div class="hotspots" id="hotspots"></div>
+      </div>
+
+      <div class="dock">
+        <section class="card glass" id="ai-card" aria-live="polite">
+          <p id="ai-message">I’d style this with blue pants and a white sweater.</p>
+          <button class="card-close" id="ai-close" aria-label="Dismiss">
+            <svg width="16" height="16" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 2l12 12M14 2L2 14"/></svg>
+          </button>
+          <div class="card-status">
+            <svg class="spark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c.9 6.6 4.9 10.8 12 12-7.1 1.2-11.1 5.4-12 12-.9-6.6-4.9-10.8-12-12C7.1 10.8 11.1 6.6 12 0Z"/></svg>
+            <span class="shimmer" id="ai-status">Styling…</span>
+          </div>
+          <button class="history">History
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </section>
+
+        <label class="ask">
+          <span class="ask-btn plus" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 2v12M2 8h12"/></svg>
+          </span>
+          <input type="text" placeholder="How can we help you?" aria-label="Ask Circle AI" />
+          <span class="ask-btn mic" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+          </span>
+        </label>
+
+        <nav class="tabbar glass" aria-label="Primary">
+          <button class="tab">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg>
+            Discover
+          </button>
+          <button class="tab">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>
+            Buy Again
+          </button>
+          <button class="tab is-on" aria-current="page">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c.9 6.6 4.9 10.8 12 12-7.1 1.2-11.1 5.4-12 12-.9-6.6-4.9-10.8-12-12C7.1 10.8 11.1 6.6 12 0Z"/></svg>
+            Circle AI
+          </button>
+          <button class="tab">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M1 2.5h3.3l2.8 12.2h11.8L21.5 6H6.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="9" cy="19.5" r="1.8"/><circle cx="17" cy="19.5" r="1.8"/></svg>
+            <span class="badge" id="cart-badge">0</span>
+            Cart
+          </button>
+          <button class="tab">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="9.5" r="3.5"/><path d="M5.5 19c1.6-2.6 4-3.8 6.5-3.8s4.9 1.2 6.5 3.8"/></svg>
+            My Target
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <script>
+      // x/y are % of the photo, pointing at the garment. `side` is which
+      // edge the dot is anchored to — the pill unfurls the other way.
+      const ITEMS = [
+        { id: "vest",  x: 12.4, y: 43, side: "left",  name: "Ribbed Knit Sweater Vest", color: "Cream",          price: "$30" },
+        { id: "tank",  x: 87,   y: 31, side: "right", name: "Linen Crewneck Tank",      color: "Rust",           price: "$15" },
+        { id: "pants", x: 87,   y: 80, side: "right", name: "Drawstring Barrel-Leg Pant", color: "Chambray Blue", price: "$35" },
+      ];
+
+      const shirt = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 2.5 3 5.2 1.3 10l3.4 1.4 1-2.2V21.5h12.6V9.2l1 2.2L22.7 10 21 5.2l-5.5-2.7c-.3 1.6-1.8 2.8-3.5 2.8s-3.2-1.2-3.5-2.8Z"/></svg>`;
+      const plus  = `<svg width="12" height="12" viewBox="0 0 16 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2v12M2 8h12"/></svg>`;
+      const check = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>`;
+
+      const layer = document.getElementById("hotspots");
+      const badge = document.getElementById("cart-badge");
+      const aiMsg = document.getElementById("ai-message");
+      const aiStatus = document.getElementById("ai-status");
+      const card = document.getElementById("ai-card");
+      let cart = 0;
+
+      ITEMS.forEach((item, i) => {
+        const el = document.createElement("button");
+        el.className = "hotspot";
+        el.dataset.side = item.side;
+        el.style.setProperty("--x", item.x + "%");
+        el.style.setProperty("--y", item.y + "%");
+        el.style.setProperty("--delay", i * 0.6 + "s");
+        el.setAttribute("aria-expanded", "false");
+        el.setAttribute("aria-label", `${item.name}, ${item.color}, ${item.price}`);
+        el.innerHTML = `
+          <span class="hotspot-icon">${shirt}</span>
+          <span class="hotspot-label">
+            <span class="hotspot-name">${item.name}</span>
+            <span class="hotspot-meta">${item.color} · <b>${item.price}</b></span>
+          </span>
+          <span class="hotspot-add" role="button" aria-label="Add ${item.name} to cart">${plus}</span>`;
+
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (e.target.closest(".hotspot-add") && el.classList.contains("is-open")) {
+            addToCart(el, item);
+          } else if (e.pointerType === "mouse") {
+            open(el, item); // hover already opened it — a click shouldn't slam it shut
+          } else {
+            toggle(el, item); // touch + keyboard
+          }
+        });
+        // hover-capable pointers get a peek; touch relies on tap
+        el.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") open(el, item); });
+        layer.appendChild(el);
+      });
+
+      function open(el, item) {
+        layer.querySelectorAll(".hotspot.is-open").forEach((o) => o !== el && close(o));
+        el.classList.add("is-open");
+        el.setAttribute("aria-expanded", "true");
+        layer.classList.add("has-open");
+        say(`The ${item.color.toLowerCase()} ${item.name.toLowerCase()} anchors this look.`, "Finding pairings…");
+      }
+
+      function close(el) {
+        el.classList.remove("is-open");
+        el.setAttribute("aria-expanded", "false");
+        if (!layer.querySelector(".is-open")) layer.classList.remove("has-open");
+      }
+
+      function toggle(el, item) {
+        el.classList.contains("is-open") ? close(el) : open(el, item);
+      }
+
+      function closeAll() { layer.querySelectorAll(".hotspot.is-open").forEach(close); }
+
+      function addToCart(el, item) {
+        if (el.classList.contains("is-added")) return;
+        el.classList.add("is-added");
+        el.querySelector(".hotspot-add").innerHTML = check;
+        cart++;
+        badge.textContent = cart;
+        badge.classList.add("is-on");
+        badge.classList.remove("bump"); void badge.offsetWidth; badge.classList.add("bump");
+        say(`Added the ${item.name.toLowerCase()} to your cart.`, "Styling…");
+      }
+
+      function say(msg, status) {
+        card.classList.remove("is-hidden");
+        aiMsg.textContent = msg;
+        aiStatus.textContent = status;
+      }
+
+      document.querySelector(".phone").addEventListener("click", (e) => {
+        if (!e.target.closest(".hotspot")) closeAll();
+      });
+      layer.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") closeAll(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
+      document.getElementById("ai-close").addEventListener("click", (e) => {
+        e.stopPropagation();
+        card.classList.add("is-hidden");
+      });
+    </script>
+  </body>
+</html>
